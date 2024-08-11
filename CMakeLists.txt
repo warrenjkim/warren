@@ -1,53 +1,109 @@
 cmake_minimum_required(VERSION 3.10)
-project(JSONParser VERSION 1.0 DESCRIPTION "JSON Parser")
+
+project(JsonParser VERSION 1.0 DESCRIPTION "JSON Parser")
 
 # cmake flags
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CTEST_ARGUMENTS "${CMAKE_CTEST_ARGUMENTS};--output-on-failure;--force-new-ctest-process;--verbose")
+
+# C++ standard
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# Prevent in-source builds
+# no cmake in the main project directory
 if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
-  message(FATAL_ERROR "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there.")
+  message(FATAL_ERROR "dumbass. lol")
 endif()
 
-# Set default build type to Debug
-if (NOT CMAKE_BUILD_TYPE)
+if (CMAKE_BUILD_TYPE STREQUAL "")
+  message(STATUS "Build type set to default")
   set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-# Include directories
+# output binaries to a subdirectory "bin"
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+# Enable CMake testing
+include(CTest)
+enable_testing()
+
+# enable GoogleTest
+include(GoogleTest)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/googletest googletest)
+set(GTEST_OUTPUT "all")
+
+# Enable Boost
+set(Boost_USE_STATIC_LIBS ON)
+find_package(Boost 1.50 REQUIRED COMPONENTS
+log
+log_setup
+)
+message(STATUS "Boost version: ${Boost_VERSION}")
+message(STATUS "Boost include: ${Boost_INCLUDE_DIRS}")
+message(STATUS "Boost lib: ${Boost_LIBRARY_DIRS}")
+
+# ===== DIRECTORIES =====
+
+# Add directory containing header files
 include_directories(include)
 
-# Source files
-set(SOURCES
-    src/nodes/null_node.cc
+# ===== LIBRARIES =====
+
+# function to create a library
+function(create_lib src_name src_dir)
+  add_library(${src_name} STATIC ${src_dir}/${src_name}.cc)
+  target_include_directories(${src_name} PUBLIC ${src_dir})
+  target_link_libraries(${src_name} PRIVATE Boost::log Boost::log_setup)
+endfunction()
+
+# node libraries
+create_lib(array_node "src/nodes")
+create_lib(boolean_node "src/nodes")
+create_lib(null_node "src/nodes")
+create_lib(number_node "src/nodes")
+create_lib(object_node "src/nodes")
+create_lib(string_node "src/nodes")
+
+# parse libraries
+create_lib(tokenizer "src/parse")
+
+# util libraries
+create_lib(logger "src/utils")
+
+# link the logger library to the necessary targets
+target_link_libraries(tokenizer PRIVATE logger)
+
+# ===== EXECUTABLES =====
+
+# function to create an executable test
+function(create_test_executable test_name test_dir)
+  add_executable(${test_name} ${test_dir}/${test_name}.cc)
+  target_link_libraries(${test_name} PRIVATE gtest_main Boost::log Boost::log_setup ${ARGN})
+  gtest_discover_tests(${test_name}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${test_dir}
+    PROPERTIES ENVIRONMENT "GTEST_COLOR=1"
+  )
+endfunction()
+
+# Create test executables
+create_test_executable(tokenizer_test "tests/parse" tokenizer)
+
+# Link the logger library to the test executable
+target_link_libraries(tokenizer_test PRIVATE logger)
+
+# ===== CODE COVERAGE =====
+
+include(cmake/CodeCoverageReportConfig.cmake)
+generate_coverage_report(
+  TARGETS
+  array_node_lib
+  boolean_node_lib
+  null_node_lib
+  number_node_lib
+  object_node_lib
+  string_node_lib
+  tokenizer_lib
+
+  TESTS
+  tokenizer_test
 )
-
-# Header files
-file(GLOB_RECURSE HEADERS include/*.h)
-
-# Create library
-add_library(json_lib STATIC ${SOURCES} ${HEADERS})
-
-# For future use: uncomment and modify when you add test files
-# enable_testing()
-# find_package(GTest REQUIRED)
-#
-# add_executable(json_tests
-#     tests/json/json_deserializer_test.cc
-#     tests/json/json_parser_test.cc
-#     tests/json/json_tokenizer_test.cc
-# )
-#
-# target_link_libraries(json_tests
-#     GTest::GTest
-#     GTest::Main
-#     json_lib
-# )
-#
-# include(GoogleTest)
-# gtest_discover_tests(json_tests)
-
-# This is just to make sure all files are included in the project structure
-add_custom_target(project_files SOURCES ${HEADERS} ${SOURCES})
