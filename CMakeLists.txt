@@ -35,8 +35,8 @@ set(GTEST_OUTPUT "all")
 # Enable Boost
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.50 REQUIRED COMPONENTS
-log
-log_setup
+  log
+  log_setup
 )
 message(STATUS "Boost version: ${Boost_VERSION}")
 message(STATUS "Boost include: ${Boost_INCLUDE_DIRS}")
@@ -55,14 +55,6 @@ function(create_lib src_name src_dir)
   target_include_directories(${src_name} PUBLIC ${src_dir})
   target_link_libraries(${src_name} PRIVATE Boost::log Boost::log_setup)
 endfunction()
-
-# node libraries
-create_lib(array_node "src/nodes")
-create_lib(boolean_node "src/nodes")
-create_lib(null_node "src/nodes")
-create_lib(number_node "src/nodes")
-create_lib(object_node "src/nodes")
-create_lib(string_node "src/nodes")
 
 # parse libraries
 create_lib(tokenizer "src/parse")
@@ -96,13 +88,7 @@ target_link_libraries(tokenizer_test PRIVATE logger)
 include(cmake/CodeCoverageReportConfig.cmake)
 generate_coverage_report(
   TARGETS
-  array_node_lib
-  boolean_node_lib
-  null_node_lib
-  number_node_lib
-  object_node_lib
-  string_node_lib
-  tokenizer_lib
+  tokenizer
 
   TESTS
   tokenizer_test
