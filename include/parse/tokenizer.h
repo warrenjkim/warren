@@ -5,26 +5,12 @@
 #include <string>
 #include <string_view>
 #include <utility>  // pair
+
+#include "utils/typedefs.h"
+
 namespace json {
 
 class Tokenizer {
- private:
-  enum TokenType : char {
-    L_BRACE = '{',
-    R_BRACE = '}',
-    L_BRACKET = '[',
-    R_BRACKET = ']',
-    COMMA = ',',
-    COLON = ':',
-    QUOTE = '"',
-    SOLIDUS = '\\',
-    PLUS = '+',
-    MINUS = '-',
-    ZERO = '0',
-    PERIOD = '.',
-    EXPONENT = 'e',
-  };
-
  public:
   static std::optional<std::queue<std::string>> tokenize(std::string_view json);
 
@@ -50,12 +36,12 @@ class Tokenizer {
       std::string_view json, size_t index, std::queue<std::string>& tokens);
 
  private:
-  static std::pair<std::string, size_t> tokenize_integer(
+  static std::pair<size_t, std::string> tokenize_integer(
       const std::string_view json, size_t index);
   static std::optional<size_t> tokenize_logical_value(
       const std::string_view json, size_t index,
       std::queue<std::string>& tokens);
-  static std::optional<std::pair<std::string, size_t>>
+  static std::optional<std::pair<size_t, std::string>>
   tokenize_control_character(std::string_view json, size_t index,
                              std::queue<std::string>& tokens);
 
@@ -68,7 +54,7 @@ class Tokenizer {
   static size_t strip_whitespace(std::string_view json, size_t index);
   static bool is_hex(const char c);
 
- public:
+ private:
   Tokenizer() = delete;
   Tokenizer(const Tokenizer&) = delete;
   Tokenizer(Tokenizer&&) = delete;
