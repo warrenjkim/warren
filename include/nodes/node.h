@@ -1,8 +1,8 @@
 #pragma once
 
-#include "visitors/visitor.h"
-
 namespace json {
+
+class JsonVisitor;
 
 class Node {
  public:

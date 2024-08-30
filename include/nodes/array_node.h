@@ -6,12 +6,16 @@
 
 namespace json {
 
+class JsonVisitor;
+
 class ArrayNode : public Node {
  public:
   void accept(JsonVisitor& visitor) const override;
 
  public:
   void add(Node* element);
+  const size_t size() const;
+  const bool empty() const;
 
  public:
   const std::vector<Node*>& get() const;

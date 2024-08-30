@@ -4,6 +4,8 @@
 
 namespace json {
 
+class JsonVisitor;
+
 class BooleanNode : public Node {
  public:
   void accept(JsonVisitor& visitor) const override;

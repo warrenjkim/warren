@@ -7,6 +7,8 @@
 
 namespace json {
 
+class JsonVisitor;
+
 class NumberNode : public Node {
  public:
   void accept(JsonVisitor& visitor) const override;
