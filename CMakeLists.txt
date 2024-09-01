@@ -42,6 +42,10 @@ message(STATUS "Boost version: ${Boost_VERSION}")
 message(STATUS "Boost include: ${Boost_INCLUDE_DIRS}")
 message(STATUS "Boost lib: ${Boost_LIBRARY_DIRS}")
 
+# Check for -fno-elide-constructors support
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-fno-elide-constructors" COMPILER_SUPPORTS_NO_ELIDE)
+
 # ===== DIRECTORIES =====
 
 # Add directory containing header files
@@ -54,6 +58,15 @@ function(create_lib src_name src_dir)
   add_library(${src_name} STATIC ${src_dir}/${src_name}.cc)
   target_include_directories(${src_name} PUBLIC ${src_dir})
   target_link_libraries(${src_name} PRIVATE Boost::log Boost::log_setup)
+
+  # Add coverage flags if building for coverage
+  if(CMAKE_BUILD_TYPE STREQUAL "Coverage")
+    target_compile_options(${src_name} PRIVATE -g --coverage -O0)
+    target_link_options(${src_name} PRIVATE -g --coverage)
+    if(COMPILER_SUPPORTS_NO_ELIDE)
+      target_compile_options(${src_name} PRIVATE -fno-elide-constructors)
+    endif()
+  endif()
 endfunction()
 
 # parse libraries
@@ -71,6 +84,16 @@ target_link_libraries(tokenizer PRIVATE logger)
 function(create_test_executable test_name test_dir)
   add_executable(${test_name} ${test_dir}/${test_name}.cc)
   target_link_libraries(${test_name} PRIVATE gtest_main Boost::log Boost::log_setup ${ARGN})
+
+  # Add coverage flags if building for coverage
+  if(CMAKE_BUILD_TYPE STREQUAL "Coverage")
+    target_compile_options(${test_name} PRIVATE -g --coverage -O0)
+    target_link_options(${test_name} PRIVATE -g --coverage)
+    if(COMPILER_SUPPORTS_NO_ELIDE)
+      target_compile_options(${test_name} PRIVATE -fno-elide-constructors)
+    endif()
+  endif()
+
   gtest_discover_tests(${test_name}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${test_dir}
     PROPERTIES ENVIRONMENT "GTEST_COLOR=1"
