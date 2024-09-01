@@ -8,6 +8,7 @@
 #include <string_view>
 #include <utility>  // pair
 
+#include "parse/token.h"
 #include "utils/macros.h"
 #include "utils/typedefs.h"
 
@@ -31,6 +32,8 @@ std::optional<std::queue<Token>> Tokenizer::tokenize(std::string_view json) {
       new_index = tokenize_array(json, index, tokens);
       break;
     default:
+      ERROR("tokenize", "Bad first character: " << json[index] << ".", 0);
+
       return std::nullopt;
   }
 
@@ -40,6 +43,8 @@ std::optional<std::queue<Token>> Tokenizer::tokenize(std::string_view json) {
 
   index = strip_whitespace(json, *new_index);
   if (index < json.length()) {
+    ERROR("tokenize", "Expected EOF, but was: " << json[index] << ".", 0);
+
     return std::nullopt;
   }
 
@@ -58,6 +63,9 @@ std::optional<size_t> Tokenizer::tokenize_object(const std::string_view json,
 
   index = strip_whitespace(json, index + 1);
   if (index >= json.length()) {
+    ERROR("tokenize_object", "No terminating object bracket (}).",
+          indent_level);
+
     return std::nullopt;
   }
 
@@ -73,11 +81,16 @@ std::optional<size_t> Tokenizer::tokenize_object(const std::string_view json,
     std::optional<size_t> new_index =
         tokenize_key_value(json, index, tokens, indent_level + 1);
     if (!new_index.has_value()) {
+      ERROR("tokenize_object", "Error tokenizing key value.", indent_level);
+
       return std::nullopt;
     }
 
     index = strip_whitespace(json, *new_index);
     if (index >= json.length()) {
+      ERROR("tokenize_object", "No terminating object bracket (}).",
+            indent_level);
+
       return std::nullopt;
     }
 
@@ -93,11 +106,15 @@ std::optional<size_t> Tokenizer::tokenize_object(const std::string_view json,
     if (c == ',') {
       tokens.emplace(c, TokenType::COMMA);
     } else {
+      ERROR("tokenize_object", "Expected a comma (,), but was: " << c << ".",
+            indent_level);
+
       return std::nullopt;
     }
 
     index = strip_whitespace(json, index + 1);
     if (index >= json.length()) {
+      ERROR("tokenize_object", "Trailing comma (,).", indent_level);
       return std::nullopt;
     }
   }
@@ -114,6 +131,8 @@ std::optional<size_t> Tokenizer::tokenize_array(const std::string_view json,
 
   index = strip_whitespace(json, index + 1);
   if (index >= json.length()) {
+    ERROR("tokenize_array", "No terminating array bracket (]).", indent_level);
+
     return std::nullopt;
   }
 
@@ -129,11 +148,15 @@ std::optional<size_t> Tokenizer::tokenize_array(const std::string_view json,
     std::optional<size_t> new_index =
         tokenize_value(json, index, tokens, indent_level + 1);
     if (!new_index.has_value()) {
+      ERROR("tokenize_array", "Error tokenizing value.", indent_level);
       return std::nullopt;
     }
 
     index = strip_whitespace(json, *new_index);
     if (index >= json.length()) {
+      ERROR("tokenize_array", "No terminating array bracket (]).",
+            indent_level);
+
       return std::nullopt;
     }
 
@@ -149,11 +172,16 @@ std::optional<size_t> Tokenizer::tokenize_array(const std::string_view json,
     if (c == ',') {
       tokens.emplace(c, TokenType::COMMA);
     } else {
+      ERROR("tokenize_array", "Expected a comma (,), but was: " << c << ".",
+            indent_level);
+
       return std::nullopt;
     }
 
     index = strip_whitespace(json, index + 1);
     if (index >= json.length()) {
+      ERROR("tokenize_array", "Trailing comma (,).", indent_level);
+
       return std::nullopt;
     }
   }
@@ -191,6 +219,8 @@ std::optional<size_t> Tokenizer::tokenize_string(const std::string_view json,
   std::string token = "";
   while (true) {
     if (index >= json.length()) {
+      ERROR("tokenize_string", "No terminating quote (\").", indent_level);
+
       return std::nullopt;
     }
 
@@ -208,6 +238,9 @@ std::optional<size_t> Tokenizer::tokenize_string(const std::string_view json,
       auto ctrl_char_result =
           tokenize_control_character(json, index, tokens, indent_level + 1);
       if (!ctrl_char_result.has_value()) {
+        ERROR("tokenize_string", "Error tokenizing control character (\\c).",
+              indent_level);
+
         return std::nullopt;
       }
 
@@ -217,6 +250,8 @@ std::optional<size_t> Tokenizer::tokenize_string(const std::string_view json,
       token += c;
     }
   }
+
+  ERROR("tokenize_string", "You fucked up beyond repair.", indent_level);
 
   return std::nullopt;
 }
@@ -231,6 +266,13 @@ std::optional<size_t> Tokenizer::tokenize_number(const std::string_view json,
   if (json[index] == '-') {
     token += '-';
     if (++index >= json.length() || !isdigit(json[index])) {
+      ERROR("tokenize_number",
+            (index >= json.length() ? "Incomplete number."
+                                    : "Expected digit (0-9), but was: " +
+                                          std::string(1, json[index]))
+                << ".",
+            indent_level);
+
       return std::nullopt;
     }
   }
@@ -244,6 +286,8 @@ std::optional<size_t> Tokenizer::tokenize_number(const std::string_view json,
     auto [new_index, fraction] =
         tokenize_integer(json, index + 1, indent_level + 1);
     if (fraction.empty()) {
+      ERROR("tokenize_number", "Incomplete fraction.", indent_level);
+
       return std::nullopt;
     }
 
@@ -260,6 +304,8 @@ std::optional<size_t> Tokenizer::tokenize_number(const std::string_view json,
     auto [new_index, exponent] =
         tokenize_integer(json, index, indent_level + 1);
     if (exponent.empty()) {
+      ERROR("tokenize_number", "Incomplete exponent.", indent_level);
+
       return std::nullopt;
     }
 
@@ -269,6 +315,8 @@ std::optional<size_t> Tokenizer::tokenize_number(const std::string_view json,
 
   if (token.front() == '0' && token.length() > 1 &&
       (token.at(1) != '.' && tolower(token.at(1)) != 'e')) {
+    ERROR("tokenize_number", "Leading 0's.", indent_level);
+
     return std::nullopt;
   }
 

@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "gtest/gtest.h"
+#include "parse/token.h"
 #include "utils/logger.h"
 #include "utils/typedefs.h"
 
@@ -16,7 +17,7 @@ class JsonTokenizerTest : public ::testing::Test {
  protected:
   void SetUp() override { utils::init_logging(boost::log::trivial::debug); }
 
-  void assert_tokenization(const std::string& input,
+  void assert_tokenization(const std::string_view input,
                            const std::vector<json::Token>& expected_tokens) {
     auto result = json::Tokenizer::tokenize(input);
     ASSERT_TRUE(result.has_value()) << "Failed to tokenize: " << input;
@@ -34,7 +35,7 @@ class JsonTokenizerTest : public ::testing::Test {
     ASSERT_TRUE(actual_tokens.empty()) << "More tokens than expected";
   }
 
-  void assert_invalid_input(const std::string& input) {
+  void assert_invalid_input(const std::string_view input) {
     auto result = json::Tokenizer::tokenize(input);
     ASSERT_FALSE(result.has_value())
         << "Incorrectly tokenized invalid input: " << input;
