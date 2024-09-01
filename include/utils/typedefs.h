@@ -2,20 +2,25 @@
 
 namespace json {
 
-enum TokenType : char {
-  L_BRACE = '{',
-  R_BRACE = '}',
-  L_BRACKET = '[',
-  R_BRACKET = ']',
-  COMMA = ',',
-  COLON = ':',
-  QUOTE = '"',
-  SOLIDUS = '\\',
-  PLUS = '+',
-  MINUS = '-',
-  ZERO = '0',
-  PERIOD = '.',
-  EXPONENT = 'e',
+enum class TokenType {
+  OBJECT_START,
+  OBJECT_END,
+  ARRAY_START,
+  ARRAY_END,
+  QUOTE,
+  COMMA,
+  COLON,
+  OBJECT,
+  ARRAY,
+  KEY,
+  VALUE,
+  STRING,
+  NUMBER,
+  BOOLEAN,
+  JSON_NULL,
+  SOLIDUS,
+  UNKNOWN,
+  END_OF_JSON
 };
 
 }  // namespace json

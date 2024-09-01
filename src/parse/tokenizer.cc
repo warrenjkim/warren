@@ -13,10 +13,9 @@
 
 namespace json {
 
-std::optional<std::queue<std::string>> Tokenizer::tokenize(
-    std::string_view json) {
-  std::queue<std::string> tokens;
-  DEBUG("[tokenize] string to parse: " << json);
+std::optional<std::queue<Token>> Tokenizer::tokenize(std::string_view json) {
+  std::queue<Token> tokens;
+  DEBUG("tokenize", "string to parse: " << json, 0);
 
   size_t index = strip_whitespace(json, 0);
   if (index >= json.length()) {
@@ -25,10 +24,10 @@ std::optional<std::queue<std::string>> Tokenizer::tokenize(
 
   std::optional<size_t> new_index;
   switch (json[index]) {
-    case L_BRACE:
+    case '{':
       new_index = tokenize_object(json, index, tokens);
       break;
-    case L_BRACKET:
+    case '[':
       new_index = tokenize_array(json, index, tokens);
       break;
     default:
@@ -44,26 +43,35 @@ std::optional<std::queue<std::string>> Tokenizer::tokenize(
     return std::nullopt;
   }
 
+  tokens.emplace("\0", TokenType::END_OF_JSON);
   return tokens;
 }
 
-std::optional<size_t> Tokenizer::tokenize_object(
-    const std::string_view json, size_t index,
-    std::queue<std::string>& tokens) {
+std::optional<size_t> Tokenizer::tokenize_object(const std::string_view json,
+                                                 size_t index,
+                                                 std::queue<Token>& tokens,
+                                                 const size_t indent_level) {
+  DEBUG("tokenize_object", "Start index: " << index, indent_level);
+
   char c = json[index];
-  consume(c, L_BRACE, tokens);
+  tokens.emplace(c, TokenType::OBJECT_START);
 
   index = strip_whitespace(json, index + 1);
   if (index >= json.length()) {
     return std::nullopt;
   }
 
-  if (consume(json[index], R_BRACE, tokens)) {
+  if (json[index] == '}') {
+    DEBUG("tokenize_object", "End index: " << strip_whitespace(json, index + 1),
+          indent_level);
+
+    tokens.emplace('}', TokenType::OBJECT_END);
     return strip_whitespace(json, index + 1);
   }
 
   while (true) {
-    std::optional<size_t> new_index = tokenize_key_value(json, index, tokens);
+    std::optional<size_t> new_index =
+        tokenize_key_value(json, index, tokens, indent_level + 1);
     if (!new_index.has_value()) {
       return std::nullopt;
     }
@@ -74,14 +82,17 @@ std::optional<size_t> Tokenizer::tokenize_object(
     }
 
     c = json[index];
-    DEBUG("[tokenize_object] (Current character, Index): (" << c << ", "
-                                                            << index << ")");
+    if (c == '}') {
+      DEBUG("tokenize_object",
+            "End index: " << strip_whitespace(json, index + 1), indent_level);
 
-    if (consume(c, R_BRACE, tokens)) {
+      tokens.emplace(c, TokenType::OBJECT_END);
       return strip_whitespace(json, index + 1);
     }
 
-    if (!consume(c, COMMA, tokens)) {
+    if (c == ',') {
+      tokens.emplace(c, TokenType::COMMA);
+    } else {
       return std::nullopt;
     }
 
@@ -92,23 +103,31 @@ std::optional<size_t> Tokenizer::tokenize_object(
   }
 }
 
-std::optional<size_t> Tokenizer::tokenize_array(
-    const std::string_view json, size_t index,
-    std::queue<std::string>& tokens) {
+std::optional<size_t> Tokenizer::tokenize_array(const std::string_view json,
+                                                size_t index,
+                                                std::queue<Token>& tokens,
+                                                const size_t indent_level) {
+  DEBUG("tokenize_array", "Start index: " << index, indent_level);
+
   char c = json[index];
-  consume(c, L_BRACKET, tokens);
+  tokens.emplace(c, TokenType::ARRAY_START);
 
   index = strip_whitespace(json, index + 1);
   if (index >= json.length()) {
     return std::nullopt;
   }
 
-  if (consume(json[index], R_BRACKET, tokens)) {
+  if (json[index] == ']') {
+    DEBUG("tokenize_array", "End index: " << strip_whitespace(json, index + 1),
+          indent_level);
+
+    tokens.emplace(']', TokenType::ARRAY_END);
     return strip_whitespace(json, index + 1);
   }
 
   while (true) {
-    std::optional<size_t> new_index = tokenize_value(json, index, tokens);
+    std::optional<size_t> new_index =
+        tokenize_value(json, index, tokens, indent_level + 1);
     if (!new_index.has_value()) {
       return std::nullopt;
     }
@@ -119,14 +138,17 @@ std::optional<size_t> Tokenizer::tokenize_array(
     }
 
     c = json[index];
-    DEBUG("[tokenize_array] (Current character, Index): (" << c << ", " << index
-                                                           << ")");
+    if (c == ']') {
+      DEBUG("tokenize_array",
+            "End index: " << strip_whitespace(json, index + 1), indent_level);
 
-    if (consume(c, R_BRACKET, tokens)) {
+      tokens.emplace(c, TokenType::ARRAY_END);
       return strip_whitespace(json, index + 1);
     }
 
-    if (!consume(c, COMMA, tokens)) {
+    if (c == ',') {
+      tokens.emplace(c, TokenType::COMMA);
+    } else {
       return std::nullopt;
     }
 
@@ -137,32 +159,34 @@ std::optional<size_t> Tokenizer::tokenize_array(
   }
 }
 
-std::optional<size_t> Tokenizer::tokenize_value(
-    const std::string_view json, size_t index,
-    std::queue<std::string>& tokens) {
+std::optional<size_t> Tokenizer::tokenize_value(const std::string_view json,
+                                                size_t index,
+                                                std::queue<Token>& tokens,
+                                                const size_t indent_level) {
   char c = json[index];
-  DEBUG("[tokenize_value] (Current character, Index): (" << c << ", " << index
-                                                         << ")");
-  if (c == QUOTE) {
-    return tokenize_string(json, index, tokens);
-  } else if (c == L_BRACE) {
-    return tokenize_object(json, index, tokens);
-  } else if (c == L_BRACKET) {
-    return tokenize_array(json, index, tokens);
-  } else if (isdigit(c) || c == MINUS) {
-    return tokenize_number(json, index, tokens);
+  if (c == '"') {
+    return tokenize_string(json, index, tokens, indent_level);
+  } else if (c == '{') {
+    return tokenize_object(json, index, tokens, indent_level);
+  } else if (c == '[') {
+    return tokenize_array(json, index, tokens, indent_level);
+  } else if (isdigit(c) || c == '-') {
+    return tokenize_number(json, index, tokens, indent_level);
   } else if (tolower(c) == 't' || tolower(c) == 'f' || tolower(c) == 'n') {
-    return tokenize_logical_value(json, index, tokens);
+    return tokenize_logical_value(json, index, tokens, indent_level);
   }
 
   return std::nullopt;
 }
 
-std::optional<size_t> Tokenizer::tokenize_string(
-    const std::string_view json, size_t index,
-    std::queue<std::string>& tokens) {
+std::optional<size_t> Tokenizer::tokenize_string(const std::string_view json,
+                                                 size_t index,
+                                                 std::queue<Token>& tokens,
+                                                 const size_t indent_level) {
+  DEBUG("tokenize_string", "Start index: " << index, indent_level);
+
   char c = json[index++];
-  consume(c, QUOTE, tokens);
+  tokens.emplace(c, TokenType::QUOTE);
 
   std::string token = "";
   while (true) {
@@ -171,18 +195,18 @@ std::optional<size_t> Tokenizer::tokenize_string(
     }
 
     c = json[index++];
-    DEBUG("[tokenize_string] (Current character, Index): (" << c << ", "
-                                                            << index << ")");
+    if (c == '"') {
+      tokens.emplace(token, TokenType::STRING);
+      tokens.emplace(c, TokenType::QUOTE);
 
-    if (c == QUOTE) {
-      tokens.emplace(token);
-      consume(c, QUOTE, tokens);
+      DEBUG("tokenize_string", "End index: " << index, indent_level);
 
       return strip_whitespace(json, index);
     }
 
-    if (c == SOLIDUS) {
-      auto ctrl_char_result = tokenize_control_character(json, index, tokens);
+    if (c == '\\') {
+      auto ctrl_char_result =
+          tokenize_control_character(json, index, tokens, indent_level + 1);
       if (!ctrl_char_result.has_value()) {
         return std::nullopt;
       }
@@ -197,73 +221,71 @@ std::optional<size_t> Tokenizer::tokenize_string(
   return std::nullopt;
 }
 
-std::optional<size_t> Tokenizer::tokenize_number(
-    const std::string_view json, size_t index,
-    std::queue<std::string>& tokens) {
+std::optional<size_t> Tokenizer::tokenize_number(const std::string_view json,
+                                                 size_t index,
+                                                 std::queue<Token>& tokens,
+                                                 const size_t indent_level) {
+  DEBUG("tokenize_number", "Start index: " << index, indent_level);
+
   std::string token = "";
-  if (json[index] == MINUS) {
-    token += MINUS;
+  if (json[index] == '-') {
+    token += '-';
     if (++index >= json.length() || !isdigit(json[index])) {
       return std::nullopt;
     }
   }
 
-  DEBUG("[tokenize_number -- Sign] (Token, Index): (" << token << ", " << index
-                                                      << ")");
-
-  auto [new_index, integer] = tokenize_integer(json, index);
+  auto [new_index, integer] = tokenize_integer(json, index, indent_level + 1);
   token += integer;
   index = strip_whitespace(json, new_index);
 
-  DEBUG("[tokenize_number -- Integer] (Token, Index): (" << token << ", "
-                                                         << index << ")");
-
-  if (index < json.length() && json[index] == PERIOD) {
-    token += PERIOD;
-    auto [new_index, fraction] = tokenize_integer(json, index + 1);
+  if (index < json.length() && json[index] == '.') {
+    token += '.';
+    auto [new_index, fraction] =
+        tokenize_integer(json, index + 1, indent_level + 1);
     if (fraction.empty()) {
       return std::nullopt;
     }
 
     token += fraction;
     index = strip_whitespace(json, new_index);
-    DEBUG("[tokenize_number -- Fraction] (Token, Index): (" << token << ", "
-                                                            << index << ")");
   }
 
-  if (index < json.length() && tolower(json[index]) == EXPONENT) {
+  if (index < json.length() && tolower(json[index]) == 'e') {
     token += json[index++];
-    if (index < json.length() &&
-        (json[index] == PLUS || json[index] == MINUS)) {
+    if (index < json.length() && (json[index] == '+' || json[index] == '-')) {
       token += json[index++];
     }
-    DEBUG("[tokenize_number -- Exponent Sign] (Token, Index): ("
-          << token << ", " << index << ")");
 
-    auto [new_index, exponent] = tokenize_integer(json, index);
+    auto [new_index, exponent] =
+        tokenize_integer(json, index, indent_level + 1);
     if (exponent.empty()) {
       return std::nullopt;
     }
 
     token += exponent;
     index = strip_whitespace(json, new_index);
-    DEBUG("[tokenize_number -- Exponent Integer] (Token, Index): ("
-          << token << ", " << index << ")");
   }
 
-  if (token.front() == ZERO && token.length() > 1 &&
-      (token.at(1) != PERIOD && token.at(1) != EXPONENT)) {
+  if (token.front() == '0' && token.length() > 1 &&
+      (token.at(1) != '.' && tolower(token.at(1)) != 'e')) {
     return std::nullopt;
   }
 
-  tokens.emplace(token);
+  DEBUG("tokenize_number", "End index: " << index, indent_level);
+
+  tokens.emplace(token, TokenType::NUMBER);
   return index;
 }
 
-std::optional<size_t> Tokenizer::tokenize_key_value(
-    const std::string_view json, size_t index,
-    std::queue<std::string>& tokens) {
-  std::optional<size_t> new_index = tokenize_string(json, index, tokens);
+std::optional<size_t> Tokenizer::tokenize_key_value(const std::string_view json,
+                                                    size_t index,
+                                                    std::queue<Token>& tokens,
+                                                    const size_t indent_level) {
+  DEBUG("tokenize_key_value", "Start index: " << index, indent_level);
+
+  std::optional<size_t> new_index =
+      tokenize_string(json, index, tokens, indent_level + 1);
   if (!new_index.has_value()) {
     return std::nullopt;
   }
@@ -274,7 +296,9 @@ std::optional<size_t> Tokenizer::tokenize_key_value(
   }
 
   char c = json[index];
-  if (!consume(c, COLON, tokens)) {
+  if (c == ':') {
+    tokens.emplace(c, TokenType::COLON);
+  } else {
     return std::nullopt;
   }
 
@@ -283,16 +307,21 @@ std::optional<size_t> Tokenizer::tokenize_key_value(
     return std::nullopt;
   }
 
-  new_index = tokenize_value(json, index, tokens);
+  new_index = tokenize_value(json, index, tokens, indent_level + 1);
   if (!new_index.has_value()) {
     return std::nullopt;
   }
+
+  DEBUG("tokenize_key_value",
+        "End index: " << strip_whitespace(json, *new_index), indent_level);
 
   return strip_whitespace(json, *new_index);
 }
 
 std::pair<size_t, std::string> Tokenizer::tokenize_integer(
-    const std::string_view json, size_t index) {
+    const std::string_view json, size_t index, const size_t indent_level) {
+  DEBUG("tokenize_integer", "Start index: " << index, indent_level);
+
   std::string token = "";
   char c = json[index];
   while (isdigit(c)) {
@@ -304,29 +333,48 @@ std::pair<size_t, std::string> Tokenizer::tokenize_integer(
     c = json[index];
   }
 
+  DEBUG("tokenize_integer", "End index: " << index, indent_level);
+
   return std::make_pair(index, token);
 }
 
 std::optional<size_t> Tokenizer::tokenize_logical_value(
-    const std::string_view json, size_t index,
-    std::queue<std::string>& tokens) {
+    const std::string_view json, size_t index, std::queue<Token>& tokens,
+    const size_t indent_level) {
+  DEBUG("tokenize_logical_value", "Start index: " << index, indent_level);
+
   switch (json[index]) {
     case 't':
-      if (!consume(std::string(json.substr(index, 4)), "true", tokens)) {
+      if (json.substr(index, 4) == "true") {
+        tokens.emplace("true", TokenType::BOOLEAN);
+      } else {
         return std::nullopt;
       }
+
+      DEBUG("tokenize_logical_value",
+            "End index: " << strip_whitespace(json, index + 4), indent_level);
 
       return strip_whitespace(json, index + 4);
     case 'f':
-      if (!consume(std::string(json.substr(index, 5)), "false", tokens)) {
+      if (json.substr(index, 5) == "false") {
+        tokens.emplace("false", TokenType::BOOLEAN);
+      } else {
         return std::nullopt;
       }
 
+      DEBUG("tokenize_logical_value",
+            "End index: " << strip_whitespace(json, index + 5), indent_level);
+
       return strip_whitespace(json, index + 5);
     case 'n':
-      if (!consume(std::string(json.substr(index, 4)), "null", tokens)) {
+      if (json.substr(index, 4) == "null") {
+        tokens.emplace("null", TokenType::JSON_NULL);
+      } else {
         return std::nullopt;
       }
+
+      DEBUG("tokenize_logical_value",
+            "End index: " << strip_whitespace(json, index + 4), indent_level);
 
       return strip_whitespace(json, index + 4);
   }
@@ -336,14 +384,15 @@ std::optional<size_t> Tokenizer::tokenize_logical_value(
 
 std::optional<std::pair<size_t, std::string>>
 Tokenizer::tokenize_control_character(const std::string_view json, size_t index,
-                                      std::queue<std::string>& tokens) {
+                                      std::queue<Token>& tokens,
+                                      const size_t indent_level) {
+  DEBUG("tokenize_control_character", "Start index: " << index, indent_level);
+
   if (index >= json.length()) {
     return std::nullopt;
   }
 
   char c = json[index];
-  DEBUG("[tokenize_control_character] (Current character, Index): ("
-        << c << ", " << index << ")");
   std::string token = "\\";
   const size_t HEX_CODE_LENGTH = 4;
   switch (c) {
@@ -355,14 +404,14 @@ Tokenizer::tokenize_control_character(const std::string_view json, size_t index,
 
       for (size_t i = 0; i < HEX_CODE_LENGTH; i++) {
         char hex_digit = json[index++];
-        DEBUG("[tokenize_control_character] (Current character, Index): ("
-              << hex_digit << ", " << index << ")");
         if (!is_hex(hex_digit) || index >= json.length()) {
           return std::nullopt;
         }
 
         token += hex_digit;
       }
+
+      DEBUG("tokenize_control_character", "End index: " << index, indent_level);
 
       return std::make_pair(index, token);
     case '"':
@@ -373,6 +422,9 @@ Tokenizer::tokenize_control_character(const std::string_view json, size_t index,
     case 'n':
     case 'r':
     case 't':
+      DEBUG("tokenize_control_character", "End index: " << index + 1,
+            indent_level);
+
       token += c;
       return std::make_pair(index + 1, token);
     default:
@@ -380,29 +432,6 @@ Tokenizer::tokenize_control_character(const std::string_view json, size_t index,
   }
 
   return std::nullopt;
-}
-
-bool Tokenizer::consume(const std::string& actual_token,
-                        const std::string& expected_token,
-                        std::queue<std::string>& tokens) {
-  if (actual_token != expected_token) {
-    return false;
-  }
-
-  tokens.emplace(actual_token);
-
-  return true;
-}
-
-bool Tokenizer::consume(const char actual_token, TokenType expected_token,
-                        std::queue<std::string>& tokens) {
-  if (actual_token != expected_token) {
-    return false;
-  }
-
-  tokens.emplace(std::string(1, actual_token));
-
-  return true;
 }
 
 size_t Tokenizer::strip_whitespace(std::string_view json, size_t index) {
