@@ -15,7 +15,9 @@
 
 class JsonTokenizerTest : public ::testing::Test {
  protected:
-  void SetUp() override { utils::init_logging(boost::log::trivial::debug); }
+  void SetUp() override {
+    json::utils::init_logging(boost::log::trivial::debug);
+  }
 
   void assert_tokenization(const std::string_view input,
                            const std::vector<json::Token>& expected_tokens) {

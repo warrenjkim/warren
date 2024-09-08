@@ -20,7 +20,9 @@
 
 class JsonParserTest : public ::testing::Test {
  protected:
-  void SetUp() override { utils::init_logging(boost::log::trivial::debug); }
+  void SetUp() override {
+    json::utils::init_logging(boost::log::trivial::debug);
+  }
   void assert_parse(const std::string_view input, json::Node* expected_ast) {
     std::unique_ptr<json::Node> result(json::Parser::parse(input));
     ASSERT_TRUE(result) << "Parser returned nullptr for valid input";
