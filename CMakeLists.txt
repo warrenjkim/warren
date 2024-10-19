@@ -99,6 +99,9 @@ add_library(visitors STATIC
 )
 target_include_directories(visitors PUBLIC src/node/visitors)
 
+#json libraries
+create_lib(json_utils "src/utils")
+
 # link the logger library to the necessary targets
 target_link_libraries(tokenizer PRIVATE logger)
 target_link_libraries(parser PRIVATE logger tokenizer types)
