@@ -1,14 +1,13 @@
 #include "nodes/boolean.h"
 
-#include "visitors/ret_visitor.h"
 #include "visitors/visitor.h"
 
 namespace json {
 
-void Boolean::accept(visitors::Visitor& visitor) const { visitor.visit(*this); }
+void Boolean::accept(visitors::Visitor& visitor) { visitor.visit(*this); }
 
-Node* Boolean::accept(visitors::ReturnVisitor& visitor) const {
-  return visitor.visit(*this);
+void Boolean::accept(visitors::ConstVisitor& visitor) const {
+  visitor.visit(*this);
 }
 
 Boolean::Boolean(const bool value) : value_(value) {}
