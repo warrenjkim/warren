@@ -43,6 +43,27 @@ Value::operator nullptr_t() const {
   return visitor.result();
 }
 
+Value& Value::operator=(bool value) {
+  delete node_;
+  node_ = new Boolean(value);
+
+  return *this;
+}
+
+Value& Value::operator=(const char* value) {
+  delete node_;
+  node_ = new String(value);
+
+  return *this;
+}
+
+Value& Value::operator=(std::nullptr_t value) {
+  delete node_;
+  node_ = new Null();
+
+  return *this;
+}
+
 bool operator==(const Value& lhs, const Value& rhs) {
   return *lhs.node_ == *rhs.node_;
 }
