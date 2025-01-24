@@ -13,17 +13,16 @@
 #include "visitors/get_visitor.h"
 #include "visitors/number_visitor.h"
 #include "visitors/object_visitor.h"
+#include "visitors/set_visitor.h"
 #include "visitors/string_visitor.h"
 
 namespace json {
 
 template <ReasonableNumber T>
-Value::Value(const T value)
-    : node_(new Number(value)), owner_(true), cache_() {}
+Value::Value(const T value) : node_(new Number(value)), parent_(nullptr) {}
 
 template <ReasonableString T>
-Value::Value(const T& value)
-    : node_(new String(value)), owner_(true), cache_() {}
+Value::Value(const T& value) : node_(new String(value)), parent_(nullptr) {}
 
 template <ReasonableNumber T>
 void Value::add(const T value) {
@@ -100,7 +99,10 @@ Value& Value::operator[](const T index) {
 
   visitors::GetVisitor visitor(index);
   node_->accept(visitor);
-  cache_.insert(key, Value(visitor.result(), /*owner=*/false));
+  cache_.insert(key, Value());
+  cache_[key].node_ = visitor.result();
+  cache_[key].parent_ = this;
+  cache_[key].key_ = key;
 
   return cache_[key];
 }
@@ -122,7 +124,10 @@ Value& Value::operator[](const T key) {
 
   visitors::GetVisitor visitor(key);
   node_->accept(visitor);
-  cache_.insert(key, Value(visitor.result(), /*owner=*/false));
+  cache_.insert(key, Value());
+  cache_[key].node_ = visitor.result();
+  cache_[key].parent_ = this;
+  cache_[key].key_ = key;
 
   return cache_[key];
 }
@@ -134,16 +139,34 @@ Value& Value::operator[](const T& key) const {
 
 template <ReasonableNumber T>
 Value& Value::operator=(const T value) {
-  delete node_;
-  node_ = new Number(value);
+  if (parent_ && key_) {
+    parent_->cache_.remove(*key_);
+  }
+
+  if (parent_) {
+    visitors::SetVisitor visitor(&node_, new Number(value), *key_);
+    parent_->node_->accept(visitor);
+  } else {
+    delete node_;
+    node_ = new Number(value);
+  }
 
   return *this;
 }
 
 template <ReasonableString T>
 Value& Value::operator=(const T& value) {
-  delete node_;
-  node_ = new String(value);
+  if (parent_ && key_) {
+    parent_->cache_.remove(*key_);
+  }
+
+  if (parent_) {
+    visitors::SetVisitor visitor(&node_, new String(value), *key_);
+    parent_->node_->accept(visitor);
+  } else {
+    delete node_;
+    node_ = new String(value);
+  }
 
   return *this;
 }

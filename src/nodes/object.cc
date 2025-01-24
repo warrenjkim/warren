@@ -1,5 +1,7 @@
 #include "nodes/object.h"
 
+#include <string>
+
 #include "utils/rbt.h"
 #include "visitors/visitor.h"
 
@@ -13,21 +15,31 @@ void Object::accept(visitors::ConstVisitor& visitor) const {
 
 Node* Object::clone() {
   Object* obj = new Object();
-  for (auto [key, value] : properties_) {
+  for (auto& [key, value] : properties_) {
     obj->add(key, value->clone());
   }
 
   return obj;
 }
 
+Object::Object(const utils::Map<std::string, Node*>& properties) {
+  for (auto& [key, value] : properties) {
+    properties_[key] = value->clone();
+  }
+}
+
 Object::~Object() {
-  for (auto [_, node] : properties_) {
+  for (auto& [_, node] : properties_) {
     delete node;
   }
 }
 
 void Object::add(const std::string& key, Node* value) {
   properties_[key] = value;
+}
+
+void Object::put(const std::string& key, Node* value) {
+  properties_.insert(key, value);
 }
 
 const size_t Object::size() const { return properties_.size(); }
