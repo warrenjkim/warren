@@ -1,47 +1,45 @@
 #pragma once
 
-#include <optional>
-#include <stdexcept>
-
-#include "pair.h"
 #include "rbt.h"
-#include "stack.h"
 
 namespace json {
 
 namespace utils {
 
-template <typename K, typename V>
-RBTree<K, V>::RBTree() : root_(nullptr), size_(0) {}
-
-template <typename K, typename V>
-RBTree<K, V>::~RBTree() {
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>::~RBTree() noexcept {
   clear();
 }
 
-template <typename K, typename V>
-RBTree<K, V>::RBTree(const RBTree& other) : root_(nullptr), size_(0) {
-  deep_copy(other);
-}
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>::RBTree(const RBTree& other)
+    : root_(other.root_ ? new Node(*other.root_) : nullptr),
+      size_(other.size_) {}
 
-template <typename K, typename V>
-RBTree<K, V>::RBTree(RBTree&& other) noexcept
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>::RBTree(RBTree&& other) noexcept
     : root_(other.root_), size_(other.size_) {
   other.root_ = nullptr;
   other.size_ = 0;
 }
 
-template <typename K, typename V>
-RBTree<K, V>& RBTree<K, V>::operator=(const RBTree& other) {
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>&
+RBTree<T, Comparator, OrderingKey>::operator=(const RBTree& other) {
   if (this != &other) {
     clear();
-    deep_copy(other);
+    size_ = other.size_;
+    if (other.root_) {
+      root_ = new Node(*other.root_);
+    }
   }
+
   return *this;
 }
 
-template <typename K, typename V>
-RBTree<K, V>& RBTree<K, V>::operator=(RBTree&& other) noexcept {
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>&
+RBTree<T, Comparator, OrderingKey>::operator=(RBTree&& other) noexcept {
   if (this != &other) {
     clear();
     root_ = other.root_;
@@ -52,111 +50,130 @@ RBTree<K, V>& RBTree<K, V>::operator=(RBTree&& other) noexcept {
   return *this;
 }
 
-template <typename K, typename V>
-void RBTree<K, V>::swap(RBTree& other) noexcept {
-  std::swap(root_, other.root_);
-  std::swap(size_, other.size_);
-}
-
-template <typename K, typename V>
-bool RBTree<K, V>::operator==(const RBTree<K, V>& other) const {
-  if (size() != other.size()) {
-    return false;
-  }
-
-  auto it = begin();
-  auto other_it = other.begin();
-
-  while (it != end() && other_it != other.end()) {
-    if (it->first != other_it->first || it->second != other_it->second) {
-      return false;
-    }
-
-    it++;
-    other_it++;
-  }
-
-  return true;
-}
-
-template <typename K, typename V>
-bool RBTree<K, V>::operator!=(const RBTree<K, V>& other) const {
-  return !(*this == other);
-}
-
-template <typename K, typename V>
-RBTree<K, V>::Node* RBTree<K, V>::root() {
-  return const_cast<Node*>(static_cast<const RBTree*>(this)->root());
-}
-
-template <typename K, typename V>
-const RBTree<K, V>::Node* RBTree<K, V>::root() const {
+template <typename T, class Comparator, class OrderingKey>
+constexpr RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::root() noexcept {
   return root_;
 }
 
-template <typename K, typename V>
-size_t RBTree<K, V>::size() const {
-  return size_;
+template <typename T, class Comparator, class OrderingKey>
+constexpr const RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::root() const noexcept {
+  return root_;
 }
 
-template <typename K, typename V>
-bool RBTree<K, V>::empty() const {
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::min() noexcept {
+  Node* curr = root_;
+  while (curr && curr->left) {
+    curr = curr->left;
+  }
+
+  return curr;
+}
+
+template <typename T, class Comparator, class OrderingKey>
+const RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::min() const noexcept {
+  return const_cast<Node*>(const_cast<RBTree*>(this)->min());
+}
+
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::max() noexcept {
+  Node* curr = root_;
+  while (curr && curr->right) {
+    curr = curr->right;
+  }
+
+  return curr;
+}
+
+template <typename T, class Comparator, class OrderingKey>
+const RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::max() const noexcept {
+  return const_cast<Node*>(const_cast<RBTree*>(this)->max());
+}
+
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::successor(Node* node) noexcept {
+  if (!node) {
+    return nullptr;
+  }
+
+  Node* curr = node;
+  if (curr->right) {
+    curr = curr->right;
+    while (curr && curr->left) {
+      curr = curr->left;
+    }
+
+    return curr;
+  } else {
+    while (curr->parent && curr == curr->parent->right) {
+      curr = curr->parent;
+    }
+
+    return curr->parent;
+  }
+}
+
+template <typename T, class Comparator, class OrderingKey>
+const RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::successor(const Node* node) const noexcept {
+  return const_cast<const Node*>(
+      const_cast<RBTree*>(this)->successor(const_cast<Node*>(node)));
+}
+
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::predecessor(Node* node) noexcept {
+  if (!node) {
+    return nullptr;
+  }
+
+  Node* curr = node;
+  if (curr->left) {
+    curr = curr->left;
+    while (curr && curr->right) {
+      curr = curr->right;
+    }
+
+    return curr;
+  } else {
+    while (curr->parent && curr == curr->parent->left) {
+      curr = curr->parent;
+    }
+
+    return curr->parent;
+  }
+}
+
+template <typename T, class Comparator, class OrderingKey>
+const RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::predecessor(
+    const Node* node) const noexcept {
+  return const_cast<const Node*>(
+      const_cast<RBTree*>(this)->predecessor(const_cast<Node*>(node)));
+}
+
+template <typename T, class Comparator, class OrderingKey>
+constexpr bool RBTree<T, Comparator, OrderingKey>::empty() const noexcept {
   return size_ == 0;
 }
 
-template <typename K, typename V>
-bool RBTree<K, V>::contains(const K& key) const {
-  return find(key) != end();
+template <typename T, class Comparator, class OrderingKey>
+constexpr size_t RBTree<T, Comparator, OrderingKey>::size() const noexcept {
+  return size_;
 }
 
-template <typename K, typename V>
-std::optional<V> RBTree<K, V>::get(const K& key) {
-  Node* node = recursive_get(root_, key);
-  if (!node) {
-    return std::nullopt;
-  }
-
-  return node->data.second;
-}
-
-template <typename K, typename V>
-const std::optional<V> RBTree<K, V>::get(const K& key) const {
-  const Node* node = recursive_get(root_, key);
-  if (!node) {
-    return std::nullopt;
-  }
-
-  return node->data.second;
-}
-
-template <typename K, typename V>
-V& RBTree<K, V>::operator[](const K& key) {
-  Node* node = recursive_get(root_, key);
-  if (node) {
-    return node->data.second;
-  }
-
-  insert(key, V());
-
-  return recursive_get(root_, key)->data.second;
-}
-
-template <typename K, typename V>
-const V& RBTree<K, V>::operator[](const K& key) const {
-  const Node* node = recursive_get(root_, key);
-  if (node) {
-    return node->data.second;
-  }
-
-  static const V default_value{};
-  return default_value;
-}
-
-template <typename K, typename V>
-void RBTree<K, V>::insert(const K& key, V value) {
+template <typename T, class Comparator, class OrderingKey>
+void RBTree<T, Comparator, OrderingKey>::insert(const T& data) {
   Node* z = nullptr;
-  size_t size = size_;
-  root_ = recursive_insert(root_, key, value, z);
+  const size_t size = size_;
+  root_ = recursive_insert(root_, data, &z);
   if (size_ == size) {
     return;
   }
@@ -164,101 +181,89 @@ void RBTree<K, V>::insert(const K& key, V value) {
   root_ = double_red_fixup(z);
 }
 
-template <typename K, typename V>
-void RBTree<K, V>::remove(const K& key) {
-  Node* del = recursive_get(root_, key);
+template <typename T, class Comparator, class OrderingKey>
+void RBTree<T, Comparator, OrderingKey>::erase(const T& data) {
+  Node* del = recursive_find(root_, data);
   if (!del) {
     return;
   }
 
-  root_ = recursive_remove(del);
+  root_ = recursive_erase(del);
   size_--;
 }
 
-template <typename K, typename V>
-void RBTree<K, V>::clear() {
-  clear(root_);
+template <typename T, class Comparator, class OrderingKey>
+void RBTree<T, Comparator, OrderingKey>::clear() {
+  recursive_clear(root_);
   root_ = nullptr;
   size_ = 0;
 }
 
-template <typename K, typename V>
-typename RBTree<K, V>::Iterator RBTree<K, V>::begin() {
-  return Iterator(tree_min(root_), this);
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::find(const T& data) noexcept {
+  return recursive_find(root_, data);
 }
 
-template <typename K, typename V>
-typename RBTree<K, V>::ConstIterator RBTree<K, V>::begin() const {
-  return ConstIterator(tree_min(root_), this);
+template <typename T, class Comparator, class OrderingKey>
+const RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::find(const T& data) const noexcept {
+  return const_cast<const Node*>(
+      const_cast<RBTree*>(this)->recursive_find(root_, data));
 }
 
-template <typename K, typename V>
-typename RBTree<K, V>::ConstIterator RBTree<K, V>::cbegin() const {
-  return ConstIterator(tree_min(root_), this);
+template <typename T, class Comparator, class OrderingKey>
+bool RBTree<T, Comparator, OrderingKey>::operator==(
+    const RBTree<T, Comparator, OrderingKey>& other) const noexcept {
+  return (size_ == other.size_) && (root_ && other.root_) &&
+         (*root_ == *other.root_);
 }
 
-template <typename K, typename V>
-typename RBTree<K, V>::Iterator RBTree<K, V>::end() {
-  return Iterator(nullptr, this);
+template <typename T, class Comparator, class OrderingKey>
+bool RBTree<T, Comparator, OrderingKey>::operator!=(
+    const RBTree<T, Comparator, OrderingKey>& other) const noexcept {
+  return !(*this == other);
 }
 
-template <typename K, typename V>
-typename RBTree<K, V>::ConstIterator RBTree<K, V>::end() const {
-  return ConstIterator(nullptr, this);
-}
-
-template <typename K, typename V>
-typename RBTree<K, V>::ConstIterator RBTree<K, V>::cend() const {
-  return ConstIterator(nullptr, this);
-}
-
-template <typename K, typename V>
-typename RBTree<K, V>::Iterator RBTree<K, V>::find(const K& key) {
-  Node* node = recursive_get(root_, key);
-  return node ? Iterator(node, this) : end();
-}
-
-template <typename K, typename V>
-typename RBTree<K, V>::ConstIterator RBTree<K, V>::find(const K& key) const {
-  const Node* node = recursive_get(root_, key);
-  return node ? ConstIterator(node, this) : cend();
-}
-
-template <typename K, typename V>
-RBTree<K, V>::Node* RBTree<K, V>::recursive_insert(Node* root, const K& key,
-                                                   V value, Node*& z) {
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::recursive_insert(Node* root, const T& data,
+                                                     Node** z) {
   if (!root) {
     size_++;
-    z = new Node(key, value);
-    return z;
+    *z = new Node(data);
+    return *z;
   }
 
-  if (key < root->data.first) {
-    root->left = recursive_insert(root->left, key, value, z);
-    if (root->left == z) {
-      z->parent = root;
+  Comparator less;
+  OrderingKey ordering_key;
+  if (less(ordering_key(data), ordering_key(root->data))) {
+    root->left = recursive_insert(root->left, data, z);
+    if (root->left == *z) {
+      (*z)->parent = root;
     }
-  } else if (key > root->data.first) {
-    root->right = recursive_insert(root->right, key, value, z);
-    if (root->right == z) {
-      z->parent = root;
+  } else if (less(ordering_key(root->data), ordering_key(data))) {
+    root->right = recursive_insert(root->right, data, z);
+    if (root->right == *z) {
+      (*z)->parent = root;
     }
   } else {
-    root->data.second = value;
+    root->data.~T();
+    new (&root->data) T(data);
   }
 
   return root;
 }
 
-template <typename K, typename V>
-RBTree<K, V>::Node* RBTree<K, V>::recursive_remove(Node* target) {
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::recursive_erase(Node* target) {
   if (target->left && target->right) {
     Node* replacement = successor(target);
-    std::swap(
-        *reinterpret_cast<Pair<K, V>*>(const_cast<Pair<K, V>*>(&target->data)),
-        *reinterpret_cast<Pair<K, V>*>(
-            const_cast<Pair<K, V>*>(&replacement->data)));
-    return recursive_remove(replacement);
+    target->data.~T();
+    new (&target->data) T(std::move(replacement->data));
+
+    return recursive_erase(replacement);
   }
 
   Node* replacement = target->left ? target->left : target->right;
@@ -299,42 +304,40 @@ RBTree<K, V>::Node* RBTree<K, V>::recursive_remove(Node* target) {
   return root_;
 }
 
-template <typename K, typename V>
-RBTree<K, V>::Node* RBTree<K, V>::recursive_get(Node* root, const K& key) {
-  return const_cast<Node*>(
-      static_cast<const RBTree*>(this)->recursive_get(root, key));
-}
-
-template <typename K, typename V>
-const RBTree<K, V>::Node* RBTree<K, V>::recursive_get(const Node* root,
-                                                      const K& key) const {
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::recursive_find(Node* root,
+                                                   const T& data) noexcept {
   if (!root) {
     return nullptr;
   }
 
-  if (key < root->data.first) {
-    return recursive_get(root->left, key);
-  } else if (key > root->data.first) {
-    return recursive_get(root->right, key);
+  Comparator less;
+  OrderingKey ordering_key;
+  if (less(ordering_key(data), ordering_key(root->data))) {
+    return recursive_find(root->left, data);
+  } else if (less(ordering_key(root->data), ordering_key(data))) {
+    return recursive_find(root->right, data);
   }
 
   return root;
 }
 
-template <typename K, typename V>
-void RBTree<K, V>::clear(Node* node) {
+template <typename T, class Comparator, class OrderingKey>
+void RBTree<T, Comparator, OrderingKey>::recursive_clear(Node* node) {
   if (!node) {
     return;
   }
 
-  clear(node->left);
-  clear(node->right);
+  recursive_clear(node->left);
+  recursive_clear(node->right);
 
   delete node;
 }
 
-template <typename K, typename V>
-RBTree<K, V>::Node* RBTree<K, V>::double_red_fixup(Node* z) {
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::double_red_fixup(Node* z) noexcept {
   if (!z->parent) {
     z->color = rbt::Color::BLACK;
     return z;
@@ -356,16 +359,16 @@ RBTree<K, V>::Node* RBTree<K, V>::double_red_fixup(Node* z) {
   return double_red_fixup(recolor(z));
 }
 
-template <typename K, typename V>
-RBTree<K, V>::Node* RBTree<K, V>::double_black_fixup(Node* replacement,
-                                                     Node* parent) {
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::double_black_fixup(Node* replacement,
+                                                       Node* parent) noexcept {
   if (!parent) {
     return replacement;
   }
 
   Node* sibling = (parent->left == replacement) ? parent->right : parent->left;
 
-  // case 1: red sibling
   if (is_red(sibling)) {
     Node* z = (parent->left == sibling) ? sibling->left : sibling->right;
     z = restructure(z);
@@ -374,7 +377,6 @@ RBTree<K, V>::Node* RBTree<K, V>::double_black_fixup(Node* replacement,
     return double_black_fixup(replacement, parent);
   }
 
-  // case 2: black sibling with two black children
   if (is_black(sibling->left) && is_black(sibling->right)) {
     sibling->color = rbt::Color::RED;
     if (is_red(parent)) {
@@ -386,7 +388,6 @@ RBTree<K, V>::Node* RBTree<K, V>::double_black_fixup(Node* replacement,
     }
   }
 
-  // case 3: black sibling with at least one red child
   Node* z = nullptr;
   if (is_red(sibling->left) && is_red(sibling->right)) {
     z = (parent->left == sibling) ? sibling->left : sibling->right;
@@ -402,8 +403,9 @@ RBTree<K, V>::Node* RBTree<K, V>::double_black_fixup(Node* replacement,
   return z;
 }
 
-template <typename K, typename V>
-RBTree<K, V>::Node* RBTree<K, V>::recolor(Node* z) {
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::recolor(Node* z) noexcept {
   z->parent->color = rbt::Color::BLACK;
   uncle(z)->color = rbt::Color::BLACK;
   grandparent(z)->color = rbt::Color::RED;
@@ -411,8 +413,9 @@ RBTree<K, V>::Node* RBTree<K, V>::recolor(Node* z) {
   return grandparent(z);
 }
 
-template <typename K, typename V>
-RBTree<K, V>::Node* RBTree<K, V>::restructure(Node* z) {
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::restructure(Node* z) noexcept {
   rbt::Structure structure;
   if (grandparent(z)->left == z->parent) {
     structure = z->parent->left == z ? rbt::Structure::LEFT_LEFT
@@ -440,8 +443,9 @@ RBTree<K, V>::Node* RBTree<K, V>::restructure(Node* z) {
   return z;
 }
 
-template <typename K, typename V>
-RBTree<K, V>::Node* RBTree<K, V>::left_rotate(Node* node) {
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::left_rotate(Node* node) noexcept {
   Node* new_root = node->right;
   node->right = new_root->left;
   if (new_root->left) {
@@ -463,8 +467,9 @@ RBTree<K, V>::Node* RBTree<K, V>::left_rotate(Node* node) {
   return new_root;
 }
 
-template <typename K, typename V>
-RBTree<K, V>::Node* RBTree<K, V>::right_rotate(Node* node) {
+template <typename T, class Comparator, class OrderingKey>
+RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::right_rotate(Node* node) noexcept {
   Node* new_root = node->left;
 
   node->left = new_root->right;
@@ -487,323 +492,29 @@ RBTree<K, V>::Node* RBTree<K, V>::right_rotate(Node* node) {
   return new_root;
 }
 
-template <typename K, typename V>
-RBTree<K, V>::Node* RBTree<K, V>::tree_min(Node* node) {
-  return const_cast<Node*>(static_cast<const RBTree*>(this)->tree_min(node));
-}
-
-template <typename K, typename V>
-const RBTree<K, V>::Node* RBTree<K, V>::tree_min(const Node* node) const {
-  while (node && node->left) {
-    node = node->left;
-  }
-
-  return node;
-}
-
-template <typename K, typename V>
-RBTree<K, V>::Node* RBTree<K, V>::tree_max(Node* node) {
-  return const_cast<Node*>(static_cast<const RBTree*>(this)->tree_max(node));
-}
-
-template <typename K, typename V>
-const RBTree<K, V>::Node* RBTree<K, V>::tree_max(const Node* node) const {
-  while (node && node->right) {
-    node = node->right;
-  }
-
-  return node;
-}
-
-template <typename K, typename V>
-RBTree<K, V>::Node* RBTree<K, V>::grandparent(Node* node) {
+template <typename T, class Comparator, class OrderingKey>
+constexpr RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::grandparent(Node* node) noexcept {
   return node->parent->parent;
 }
 
-template <typename K, typename V>
-RBTree<K, V>::Node* RBTree<K, V>::uncle(Node* node) {
+template <typename T, class Comparator, class OrderingKey>
+constexpr RBTree<T, Comparator, OrderingKey>::Node*
+RBTree<T, Comparator, OrderingKey>::uncle(Node* node) noexcept {
   Node* gp = grandparent(node);
   return gp->left == node->parent ? gp->right : gp->left;
 }
 
-template <typename K, typename V>
-RBTree<K, V>::Node* RBTree<K, V>::successor(Node* node) {
-  return const_cast<Node*>(static_cast<const RBTree*>(this)->successor(node));
-}
-
-template <typename K, typename V>
-const typename RBTree<K, V>::Node* RBTree<K, V>::successor(
-    const Node* node) const {
-  if (node->right) {
-    const Node* successor = node->right;
-    while (successor->left) {
-      successor = successor->left;
-    }
-
-    return successor;
-  }
-
-  const Node* successor = node;
-  const Node* parent = node->parent;
-  while (parent && successor == parent->right) {
-    successor = parent;
-    parent = parent->parent;
-  }
-
-  return parent;
-}
-
-template <typename K, typename V>
-RBTree<K, V>::Node* RBTree<K, V>::predecessor(Node* node) {
-  return const_cast<Node*>(static_cast<const RBTree*>(this)->predecessor(node));
-}
-
-template <typename K, typename V>
-const RBTree<K, V>::Node* RBTree<K, V>::predecessor(const Node* node) const {
-  if (node->left) {
-    return tree_max(node->left);
-  }
-
-  while (node->parent && node == node->parent->left) {
-    node = node->parent;
-  }
-
-  return node->parent;
-}
-
-template <typename K, typename V>
-bool RBTree<K, V>::is_black(const Node* node) const {
+template <typename T, class Comparator, class OrderingKey>
+constexpr bool RBTree<T, Comparator, OrderingKey>::is_black(
+    const Node* node) const noexcept {
   return !node || node->color == rbt::Color::BLACK;
 }
 
-template <typename K, typename V>
-bool RBTree<K, V>::is_red(const Node* node) const {
+template <typename T, class Comparator, class OrderingKey>
+constexpr bool RBTree<T, Comparator, OrderingKey>::is_red(
+    const Node* node) const noexcept {
   return node && node->color == rbt::Color::RED;
-}
-
-template <typename K, typename V>
-void RBTree<K, V>::deep_copy(const RBTree& other) {
-  clear();
-  if (!other.root_) {
-    return;
-  }
-
-  struct CopyNode {
-    const Node* src;
-    Node* dest;
-    CopyNode(const Node* s, Node* d) : src(s), dest(d) {}
-  };
-
-  Stack<CopyNode> stack;
-  root_ = new Node(other.root_->data);
-  root_->color = other.root_->color;
-  stack.push(CopyNode(other.root_, root_));
-
-  while (!stack.empty()) {
-    CopyNode current = *stack.top();
-    stack.pop();
-
-    if (current.src->left) {
-      current.dest->left = new Node(current.src->left->data);
-      current.dest->left->color = current.src->left->color;
-      current.dest->left->parent = current.dest;
-      stack.push(CopyNode(current.src->left, current.dest->left));
-    }
-
-    if (current.src->right) {
-      current.dest->right = new Node(current.src->right->data);
-      current.dest->right->color = current.src->right->color;
-      current.dest->right->parent = current.dest;
-      stack.push(CopyNode(current.src->right, current.dest->right));
-    }
-  }
-
-  size_ = other.size_;
-}
-
-}  // namespace utils
-
-}  // namespace json
-
-namespace json {
-
-namespace utils {
-
-template <typename K, typename V>
-RBTree<K, V>::Iterator::Iterator() : curr_(nullptr), tree_(nullptr) {}
-
-template <typename K, typename V>
-RBTree<K, V>::Iterator::Iterator(Node* node, const RBTree<K, V>* tree)
-    : curr_(node), tree_(tree) {}
-
-template <typename K, typename V>
-typename RBTree<K, V>::Iterator& RBTree<K, V>::Iterator::operator++() {
-  if (!curr_) {
-    throw std::out_of_range("Iterator cannot be dereferenced");
-  }
-
-  curr_ = const_cast<Node*>(tree_->successor(curr_));
-  return *this;
-}
-
-template <typename K, typename V>
-typename RBTree<K, V>::Iterator RBTree<K, V>::Iterator::operator++(int) {
-  Iterator temp = *this;
-  ++(*this);
-  return temp;
-}
-
-template <typename K, typename V>
-typename RBTree<K, V>::Iterator& RBTree<K, V>::Iterator::operator--() {
-  if (!tree_) {
-    throw std::out_of_range("Iterator cannot be dereferenced");
-  }
-
-  if (!curr_) {
-    curr_ = const_cast<Node*>(tree_->tree_max(tree_->root()));
-  } else if (curr_ == tree_->tree_min(tree_->root())) {
-    curr_ = nullptr;
-  } else {
-    curr_ = const_cast<Node*>(tree_->predecessor(curr_));
-  }
-
-  return *this;
-}
-
-template <typename K, typename V>
-typename RBTree<K, V>::Iterator RBTree<K, V>::Iterator::operator--(int) {
-  Iterator temp = *this;
-  --(*this);
-  return temp;
-}
-
-template <typename K, typename V>
-typename RBTree<K, V>::Iterator::reference RBTree<K, V>::Iterator::operator*()
-    const {
-  if (!curr_) {
-    throw std::out_of_range("Iterator cannot be dereferenced");
-  }
-
-  return reinterpret_cast<reference>(curr_->data);
-}
-
-template <typename K, typename V>
-typename RBTree<K, V>::Iterator::pointer RBTree<K, V>::Iterator::operator->()
-    const {
-  return &(this->operator*());
-}
-
-template <typename K, typename V>
-bool RBTree<K, V>::Iterator::operator==(const Iterator& other) const {
-  return curr_ == other.curr_;
-}
-
-template <typename K, typename V>
-bool RBTree<K, V>::Iterator::operator!=(const Iterator& other) const {
-  return !(*this == other);
-}
-
-template <typename K, typename V>
-bool RBTree<K, V>::Iterator::operator==(const ConstIterator& other) const {
-  return curr_ == other.curr_;
-}
-
-template <typename K, typename V>
-bool RBTree<K, V>::Iterator::operator!=(const ConstIterator& other) const {
-  return !(*this == other);
-}
-
-template <typename K, typename V>
-RBTree<K, V>::ConstIterator::ConstIterator() : curr_(nullptr), tree_(nullptr) {}
-
-template <typename K, typename V>
-RBTree<K, V>::ConstIterator::ConstIterator(const Node* node,
-                                           const RBTree<K, V>* tree)
-    : curr_(node), tree_(tree) {}
-
-template <typename K, typename V>
-RBTree<K, V>::ConstIterator::ConstIterator(const Iterator& it)
-    : curr_(it.curr_), tree_(it.tree_) {}
-
-template <typename K, typename V>
-typename RBTree<K, V>::ConstIterator&
-RBTree<K, V>::ConstIterator::operator++() {
-  if (!curr_) {
-    throw std::out_of_range("ConstIterator cannot be dereferenced");
-  }
-
-  curr_ = tree_->successor(curr_);
-  return *this;
-}
-
-template <typename K, typename V>
-typename RBTree<K, V>::ConstIterator RBTree<K, V>::ConstIterator::operator++(
-    int) {
-  ConstIterator temp = *this;
-  ++(*this);
-  return temp;
-}
-
-template <typename K, typename V>
-typename RBTree<K, V>::ConstIterator&
-RBTree<K, V>::ConstIterator::operator--() {
-  if (!tree_) {
-    throw std::out_of_range("Iterator cannot be dereferenced");
-  }
-
-  if (!curr_) {
-    curr_ = tree_->tree_max(tree_->root());
-  } else if (curr_ == tree_->tree_min(tree_->root())) {
-    curr_ = nullptr;
-  } else {
-    curr_ = tree_->predecessor(curr_);
-  }
-
-  return *this;
-}
-
-template <typename K, typename V>
-typename RBTree<K, V>::ConstIterator RBTree<K, V>::ConstIterator::operator--(
-    int) {
-  ConstIterator temp = *this;
-  --(*this);
-  return temp;
-}
-
-template <typename K, typename V>
-typename RBTree<K, V>::ConstIterator::reference
-RBTree<K, V>::ConstIterator::operator*() const {
-  if (!curr_) {
-    throw std::out_of_range("ConstIterator cannot be dereferenced");
-  }
-
-  return reinterpret_cast<reference>(curr_->data);
-}
-
-template <typename K, typename V>
-typename RBTree<K, V>::ConstIterator::pointer
-RBTree<K, V>::ConstIterator::operator->() const {
-  return &(this->operator*());
-}
-
-template <typename K, typename V>
-bool RBTree<K, V>::ConstIterator::operator==(const ConstIterator& other) const {
-  return curr_ == other.curr_;
-}
-
-template <typename K, typename V>
-bool RBTree<K, V>::ConstIterator::operator!=(const ConstIterator& other) const {
-  return !(*this == other);
-}
-
-template <typename K, typename V>
-bool RBTree<K, V>::ConstIterator::operator==(const Iterator& other) const {
-  return curr_ == other.curr_;
-}
-
-template <typename K, typename V>
-bool RBTree<K, V>::ConstIterator::operator!=(const Iterator& other) const {
-  return !(*this == other);
 }
 
 }  // namespace utils
