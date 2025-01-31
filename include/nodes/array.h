@@ -25,7 +25,7 @@ class Array : public Node {
   Array& operator=(const Array&) = delete;
 
  public:
-  void add(Node* element);
+  void push_back(Node* element);
   const size_t size() const;
   const bool empty() const;
 
