@@ -9,6 +9,12 @@
 
 namespace json {
 
+namespace visitors {
+
+class ContainerTypeVisitor;
+
+}  // namespace visitors
+
 class Value;
 
 }  // namespace json
@@ -35,6 +41,10 @@ namespace json {
 
 class Value {
  public:
+  class Iterator;
+  class ConstIterator;
+
+ public:
   Value();
   ~Value();
   Value(Value&& other);
@@ -59,6 +69,13 @@ class Value {
   void insert(const std::string&, const bool value);
   void insert(const std::string&, const char* value);
   void insert(const std::string&, const Value& value);
+
+ public:
+  Iterator begin();
+  Iterator end();
+
+  ConstIterator cbegin();
+  ConstIterator cend();
 
  public:
   operator bool() const;
@@ -145,6 +162,116 @@ class Value {
   Value* parent_;
   std::optional<std::string> key_;
   utils::Map<std::string, Value> cache_;
+
+ private:
+  enum ContainerType { ARRAY, OBJECT };
+
+ public:
+  class Iterator {
+   public:
+    using iterator_category = std::bidirectional_iterator_tag;
+    using value_type = Value;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type*;
+    using reference = value_type&;
+
+   public:
+    Iterator() = default;
+
+   public:
+    ~Iterator();
+    Iterator(const Iterator& other);
+    Iterator(Iterator&& other) noexcept;
+    Iterator& operator=(const Iterator& other);
+    Iterator& operator=(Iterator&& other) noexcept;
+
+   public:
+    Iterator& operator++();
+    Iterator operator++(int);
+
+    Iterator& operator--();
+    Iterator operator--(int);
+
+    reference operator*();
+    pointer operator->();
+
+    bool operator==(const Iterator& other) const;
+    bool operator!=(const Iterator& other) const;
+
+   private:
+    Value* curr_ = nullptr;
+    Value* value_ = nullptr;
+    union ContainerIterator {
+      std::vector<Node*>::iterator array_it = std::vector<Node*>::iterator();
+      utils::Map<std::string, Node*>::Iterator map_it;
+      ~ContainerIterator() {}
+    } it_;
+    ContainerType type_;
+    enum StartPosition { BEGIN, END };
+
+   private:
+    Iterator(Value* value, const StartPosition pos);
+
+   private:
+    friend class Value;
+    friend class ConstIterator;
+    friend class visitors::ContainerTypeVisitor;
+  };
+
+ public:
+  class ConstIterator {
+   public:
+    using iterator_category = std::bidirectional_iterator_tag;
+    using value_type = Value;
+    using difference_type = std::ptrdiff_t;
+    using const_pointer = value_type*;
+    using const_reference = value_type&;
+
+   public:
+    ConstIterator() = default;
+
+   public:
+    ~ConstIterator();
+    ConstIterator(const ConstIterator& other);
+    ConstIterator(ConstIterator&& other) noexcept;
+    ConstIterator& operator=(const ConstIterator& other);
+    ConstIterator& operator=(ConstIterator&& other) noexcept;
+
+   public:
+    ConstIterator& operator++();
+    ConstIterator operator++(int);
+
+    ConstIterator& operator--();
+    ConstIterator operator--(int);
+
+    const_reference operator*();
+    const_pointer operator->();
+
+    bool operator==(const ConstIterator& other) const;
+    bool operator!=(const ConstIterator& other) const;
+
+   private:
+    Value* curr_ = nullptr;
+    Value* value_ = nullptr;
+    union ContainerConstIterator {
+      std::vector<Node*>::const_iterator array_cit =
+          std::vector<Node*>::const_iterator();
+      utils::Map<std::string, Node*>::ConstIterator map_cit;
+    } cit_;
+    ContainerType type_;
+    enum StartPosition { CBEGIN, CEND };
+
+   private:
+    ConstIterator(Value* value, const StartPosition pos);
+
+   private:
+    friend class Value;
+    friend class ConstConstIterator;
+    friend class visitors::ContainerTypeVisitor;
+  };
+
+ private:
+  friend class visitors::ContainerTypeVisitor;
 };
 
 }  // namespace json
