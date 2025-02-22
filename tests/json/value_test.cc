@@ -907,7 +907,6 @@ TEST_F(ValueTest, ArrayRemove) {
   // assert
   json::Array expected_arr;
   expected_arr.get().push_back(new json::String("value1"));
-  expected_arr.get().push_back(nullptr);  // index 1 is nullified
   expected_arr.get().push_back(new json::String("value3"));
 
   ASSERT_EQ(arr, expected_arr);
@@ -1383,4 +1382,42 @@ TEST_F(ValueTest, DISABLED_ObjectConstIteratorDecrementBegin) {
   json::Value::ConstIterator it = obj.cbegin();
   // act & assert
   ASSERT_THROW(--it, std::out_of_range);
+}
+
+TEST_F(ValueTest, ArrayErase) {
+  delete root_;
+  delete nested_obj_;
+
+  // arrange
+  json::Array* expected = new json::Array();
+  expected->push_back(new json::String("two"));
+  expected->push_back(new json::Boolean(false));
+  expected->push_back(new json::Null());
+
+  // act
+  json::Value arr(array_);
+  arr.erase(arr.cbegin());
+
+  // assert
+  ASSERT_EQ(arr, json::Value(expected));
+}
+
+TEST_F(ValueTest, ObjectErase) {
+  // arrange
+  json::Object* expected = new json::Object();
+  expected->insert("null", new json::Null());
+  expected->insert("bool", new json::Boolean(true));
+  expected->insert("number", new json::Number(42.5));
+  expected->insert("string", new json::String("hello"));
+  expected->insert("object", nested_obj_->clone());
+
+  // act
+  json::Value obj(root_);
+  obj.erase(obj.cbegin());
+
+  // assert
+  ASSERT_EQ(obj, json::Value(expected));
+
+  delete array_;
+  delete nested_obj_;
 }
