@@ -43,26 +43,22 @@ add_library(json_impl STATIC ${JSON_SOURCES})
 # Create the public interface library that users will link against
 add_library(json INTERFACE)
 
-# Ensure include files use warren/json.h namespace
-set(PUBLIC_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/include")
-file(MAKE_DIRECTORY "${PUBLIC_INCLUDE_DIR}/warren")
-
-# Copy json.h to the warren directory and create a master header
-configure_file(
-  "${CMAKE_CURRENT_SOURCE_DIR}/include/json.h"
-  "${PUBLIC_INCLUDE_DIR}/warren/json.h"
-  COPYONLY
-)
-
 # Set include directories for implementation
 target_include_directories(json_impl PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/src
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+# Create an interface library for test includes
+add_library(json_test_includes INTERFACE)
+target_include_directories(json_test_includes INTERFACE
+  ${CMAKE_CURRENT_SOURCE_DIR}/src
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
 # Set include directories for users
 target_include_directories(json INTERFACE
-  $<BUILD_INTERFACE:${PUBLIC_INCLUDE_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
 
@@ -77,11 +73,9 @@ install(TARGETS json json_impl
   RUNTIME DESTINATION bin
 )
 
-# Install headers - restructured to use warren/json.h namespace
-install(FILES "${PUBLIC_INCLUDE_DIR}/warren/json.h" DESTINATION include/warren)
-install(DIRECTORY include/ DESTINATION include/warren
+install(DIRECTORY include/
+  DESTINATION include
   FILES_MATCHING PATTERN "*.h" PATTERN "*.inl"
-  PATTERN "json.h" EXCLUDE # Skip the root json.h as we've already copied it
 )
 
 # Install config
@@ -91,7 +85,12 @@ install(EXPORT JsonConfig
 )
 
 # Testing
-option(BUILD_TESTING "Build tests" OFF)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+  option(BUILD_TESTING "Build tests" OFF)
+else()
+  # Force OFF when used as a subproject
+  set(BUILD_TESTING OFF CACHE BOOL "Build tests" FORCE)
+endif()
 if(BUILD_TESTING)
   # Output binaries to a subdirectory "bin"
   set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
