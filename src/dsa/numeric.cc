@@ -148,7 +148,7 @@ Integral to_integral(std::string_view intgr) {
     }
   }
 
-  int sign = negative ? -1 : 1;
+  int8_t sign = negative ? -1 : 1;
   switch (res.type) {
     case Integral::INT8:
       res.i8 = sign * int8_t(res.accumulator);
@@ -169,7 +169,18 @@ Integral to_integral(std::string_view intgr) {
 
 FloatingPoint to_floating_point(std::string_view intgr, std::string_view frac,
                                 std::string_view exp) {
-  Integral exponent = to_integral(exp) - frac.length();
+  int64_t lhs = static_cast<int64_t>(to_integral(exp));
+  size_t rhs = frac.length();
+
+  if (rhs > size_t(INT64_MAX)) {
+    throw std::out_of_range("rhs is too large for int64_t subtraction");
+  }
+
+  if (lhs < INT64_MIN + int64_t(rhs)) {
+    throw std::out_of_range("Integral subtraction would underflow");
+  }
+
+  Integral exponent = Integral(lhs - int64_t(rhs));
   size_t i = 0;
   if (!intgr.empty() && intgr.front() == '-') {
     i++;
@@ -277,6 +288,7 @@ NormalizedFloatingPoint normalize(FloatingPoint&& fp) {
 //   return res;
 // }
 
+// TODO(i need to implement bigint before i can implement any clamping logic)
 double to_binary64(NormalizedFloatingPoint nfp) {
   uint64_t mask = (1ULL << (64 - (DOUBLE_SIGNIFICAND_BITS + GRS_BITS))) - 1;
   uint64_t top = nfp.significand >> (64 - (DOUBLE_SIGNIFICAND_BITS + GRS_BITS));
@@ -304,35 +316,20 @@ double to_binary64(NormalizedFloatingPoint nfp) {
   uint64_t bits = (uint64_t(nfp.negative) << 63) |
                   (uint64_t(nfp.exponent) << 52) | mantissa;
 
-  // TODO(i need to implement bigint before i can implement any clamping logic)
-  // if (nfp.exponent < DOUBLE_EMIN) {
-  //   // clamp subnormals to 0 and preserve sign
-  //   bits = uint64_t(nfp.negative) << 63;
-  // } else if (nfp.exponent > DOUBLE_EMAX) {
-  //   // clamp overflow to infinity
-  //   bits = (uint64_t(nfp.negative) << 63) | (0x7FFULL << 52);
-  // }
-
   memcpy(&res, &bits, sizeof(double));
 
   return res;
 }
 
+// TODO(find a way to parse into a float as well)
 Numeric to_numeric(std::string_view intgr, std::string_view frac,
                    std::string_view exp) {
   if (frac.empty() && exp.empty()) {
     return Numeric(std::move(to_integral(intgr)));
   }
 
-  NormalizedFloatingPoint nfp =
-      normalize(std::move(to_floating_point(intgr, frac, exp)));
-  // TODO(find a way to parse into a float as well)
-  // std::optional<float> flt = to_binary32(nfp);
-  // if (flt) {
-  //   return Numeric(*flt);
-  // }
-
-  return Numeric(to_binary64(std::move(nfp)));
+  return Numeric(to_binary64(
+      std::move(normalize(std::move(to_floating_point(intgr, frac, exp))))));
 }
 
 }  // namespace dsa
