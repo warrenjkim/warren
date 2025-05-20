@@ -27,7 +27,7 @@ TEST_F(SetVisitorTest, SetObjectValue) {
   // assert
   json::nodes::Object* expected_root = new json::nodes::Object();
   expected_root->insert("key", num.clone());
-  ASSERT_EQ(json::Value(root), json::Value(expected_root));
+  EXPECT_EQ(json::Value(root), json::Value(expected_root));
 }
 
 TEST_F(SetVisitorTest, SetArrayValue) {
@@ -44,18 +44,18 @@ TEST_F(SetVisitorTest, SetArrayValue) {
   // assert
   json::nodes::Array* expected_root = new json::nodes::Array();
   expected_root->push_back(num.clone());
-  ASSERT_EQ(json::Value(root), json::Value(expected_root));
+  EXPECT_EQ(json::Value(root), json::Value(expected_root));
 }
 
 TEST_F(SetVisitorTest, SetBooleanValueThrowsException) {
   // arrange
   json::nodes::Boolean* root = new json::nodes::Boolean(true);
   json::nodes::Node* string = new json::nodes::String("value");
-  json::nodes::Number* num = new json::nodes::Number(123);
+  json::nodes::Number* num = new json::nodes::Number(json::dsa::Numeric(123));
 
   // act + assert
   json::visitors::SetVisitor visitor(&string, num, "key");
-  ASSERT_THROW(root->accept(visitor), json::UnexpectedParentException);
+  EXPECT_THROW(root->accept(visitor), json::UnexpectedParentException);
 
   delete root;
   delete string;
@@ -66,11 +66,11 @@ TEST_F(SetVisitorTest, SetNullValueThrowsException) {
   // arrange
   json::nodes::Null* root = new json::nodes::Null();
   json::nodes::Node* string = new json::nodes::String("value");
-  json::nodes::Number* num = new json::nodes::Number(123);
+  json::nodes::Number* num = new json::nodes::Number(json::dsa::Numeric(123));
 
   // act + assert
   json::visitors::SetVisitor visitor(&string, num, "key");
-  ASSERT_THROW(root->accept(visitor), json::UnexpectedParentException);
+  EXPECT_THROW(root->accept(visitor), json::UnexpectedParentException);
 
   delete root;
   delete string;
@@ -79,13 +79,13 @@ TEST_F(SetVisitorTest, SetNullValueThrowsException) {
 
 TEST_F(SetVisitorTest, SetNumberValueThrowsException) {
   // arrange
-  json::nodes::Number* root = new json::nodes::Number(42);
+  json::nodes::Number* root = new json::nodes::Number(json::dsa::Numeric(42));
   json::nodes::Node* string = new json::nodes::String("value");
-  json::nodes::Number* num = new json::nodes::Number(123);
+  json::nodes::Number* num = new json::nodes::Number(json::dsa::Numeric(123));
 
   // act + assert
   json::visitors::SetVisitor visitor(&string, num, "key");
-  ASSERT_THROW(root->accept(visitor), json::UnexpectedParentException);
+  EXPECT_THROW(root->accept(visitor), json::UnexpectedParentException);
 
   delete root;
   delete num;
@@ -96,11 +96,11 @@ TEST_F(SetVisitorTest, SetStringValueThrowsException) {
   // arrange
   json::nodes::String* root = new json::nodes::String("test");
   json::nodes::Node* string = new json::nodes::String("value");
-  json::nodes::Number* num = new json::nodes::Number(123);
+  json::nodes::Number* num = new json::nodes::Number(json::dsa::Numeric(123));
 
   // act + assert
   json::visitors::SetVisitor visitor(&string, num, "key");
-  ASSERT_THROW(root->accept(visitor), json::UnexpectedParentException);
+  EXPECT_THROW(root->accept(visitor), json::UnexpectedParentException);
 
   delete root;
   delete num;

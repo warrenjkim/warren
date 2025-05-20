@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <stdexcept>  // runtime_error
 #include <string_view>
+#include <type_traits>
 
 #include "warren/internal/utils/concepts.h"
 
@@ -100,8 +101,20 @@ struct Numeric {
     double dbl;
   };
 
+  Numeric() : intgr(), type(INTEGRAL) {}
+
+  template <ReasonableNumber T>
+  explicit Numeric(T value) {
+    if (std::is_integral_v<T>) {
+      new (&intgr) Integral(value);
+      type = INTEGRAL;
+    } else {
+      dbl = value;
+      type = DOUBLE;
+    }
+  }
+
   Numeric(Integral&& intgr) : intgr(std::move(intgr)), type(INTEGRAL) {}
-  Numeric(double dbl) : dbl(dbl), type(DOUBLE) {}
 
   [[noreturn]] void unreachable() const {
     throw std::runtime_error("Invalid Numeric");
