@@ -4,8 +4,16 @@ common --curses=yes
 
 common --check_direct_dependencies=warning
 
+build --action_env=CC=gcc
+build --action_env=CXX=g++
+
 build --cxxopt=-std=gnu++23
 build --cxxopt=-Wall
 build --cxxopt=-Wextra
-build --verbose_failures
-build --keep_going
+build --cxxopt=-Wpedantic
+build --cxxopt=-Werror
+build --cxxopt=-Wconversion
+build --cxxopt=-Wsign-conversion
+
+# TODO(fix the shadowing)
+build --cxxopt=-Wno-shadow
