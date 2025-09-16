@@ -3,14 +3,14 @@
 #include <utility>
 #include <vector>
 
-#include "warren/json/node.h"
-#include "warren/json/visitor.h"
+#include "warren/json/internal/ast/node.h"
+#include "warren/json/internal/ast/visitor.h"
 
 namespace json {
 namespace ast {
 
 struct Array : public Node {
-  void accept(Visitor& visitor) override { visitor.visit(this); }
+  void accept(Visitor& visitor) const override { visitor.visit(*this); }
 
   explicit Array(std::vector<Node*> value) : value(std::move(value)) {}
 

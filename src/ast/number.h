@@ -1,17 +1,35 @@
 #pragma once
 
-#include "warren/json/node.h"
-#include "warren/json/visitor.h"
+#include <cstdint>
+
+#include "warren/json/internal/ast/node.h"
+#include "warren/json/internal/ast/visitor.h"
 
 namespace json {
 namespace ast {
 
 struct Number : public Node {
-  void accept(Visitor& visitor) override { visitor.visit(this); }
+  void accept(Visitor& visitor) const override { visitor.visit(*this); }
 
-  explicit Number(double value) : value(value) {}
+  explicit Number(double value) : dbl(value), type(Type::DOUBLE) {
+    // TODO(fix this)
+    this->value = value;
+  }
 
+  explicit Number(int32_t value) : dbl(value), type(Type::DOUBLE) {
+    // TODO(fix this)
+    this->value = double(value);
+  }
+
+  union {
+    double dbl;
+    int32_t intgr;
+  };
+
+  // TODO(remove this)
   double value;
+
+  enum Type { INTEGRAL, DOUBLE } type;
 };
 
 }  // namespace ast

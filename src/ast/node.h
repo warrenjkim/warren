@@ -1,6 +1,6 @@
 #pragma once
 
-#include "visitor.h"
+#include "warren/json/internal/ast/visitor.h"
 
 namespace json {
 namespace ast {
@@ -8,7 +8,7 @@ namespace ast {
 class Visitor;
 
 struct Node {
-  virtual void accept(Visitor& visitor) = 0;
+  virtual void accept(Visitor& visitor) const = 0;
 
   virtual ~Node() noexcept = default;
 };
