@@ -30,7 +30,7 @@ cc_library(
     deps = [
         ":lexer",
         ":token",
-        "//src/ast:nodes",
+        "//src/api:value",
         "//src/utils:exception",
     ],
 )
@@ -51,7 +51,6 @@ cc_library(
     ],
     deps = [
         ":token",
-        "//src/ast:nodes",
     ],
 )
 
