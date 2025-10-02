@@ -18,11 +18,11 @@ Token Lexer::next_token() {
 
   switch (json_[pos_]) {
     case 'n':
-      return lex_null();
+      return lex_literal("null", TokenType::JSON_NULL);
     case 't':
-      return lex_true();
+      return lex_literal("true", TokenType::BOOLEAN);
     case 'f':
-      return lex_false();
+      return lex_literal("false", TokenType::BOOLEAN);
     case '"':
       return lex_string();
     case '-':
@@ -56,6 +56,8 @@ Token Lexer::next_token() {
       pos_++;
       return Token(",", TokenType::COMMA);
     default:
+      error_ = Error(TokenType::UNKNOWN, pos_,
+                     "unknown token: " + json_.substr(pos_));
       return Token(std::string(1, json_[pos_++]), TokenType::UNKNOWN);
   }
 }
@@ -70,54 +72,43 @@ const Token& Lexer::operator*() const { return curr_; }
 
 const Token* Lexer::operator->() const { return &curr_; }
 
+Lexer::operator bool() const { return !eof() && ok(); }
+
+Lexer::Error Lexer::error() const { return *error_; }
+
 bool Lexer::eof() const { return curr_.type == TokenType::END_OF_JSON; }
 
-Token Lexer::lex_null() {
+bool Lexer::ok() const { return !error_; }
+
+Token Lexer::lex_literal(const std::string& literal, TokenType type) {
   size_t start = pos_;
-  if (pos_ + 3 >= json_.length()) {
-    return Token(json_.substr(start), TokenType::UNKNOWN);
+  if (pos_ + literal.length() > json_.length()) {
+    std::string token = json_.substr(start);
+    error_ = Error(
+        type, start,
+        "incomplete literal: got '" + token + "', expected '" + literal + "'");
+
+    return Token(token, TokenType::UNKNOWN);
   }
 
-  if (json_[pos_++] != 'n' || json_[pos_++] != 'u' || json_[pos_++] != 'l' ||
-      json_[pos_++] != 'l') {
-    return Token(json_.substr(start, pos_ - start), TokenType::UNKNOWN);
+  for (char c : literal) {
+    if (json_[pos_++] != c) {
+      std::string token = json_.substr(start, pos_ - start);
+      error_ = Error(type, start,
+                     "unexpected literal: got '" + token + "', expected '" +
+                         literal + "'");
+
+      return Token(token, TokenType::UNKNOWN);
+    }
   }
 
-  return Token("null", TokenType::JSON_NULL);
-}
-
-Token Lexer::lex_true() {
-  size_t start = pos_;
-  if (pos_ + 3 >= json_.length()) {
-    pos_ = json_.length();
-    return Token(json_.substr(start), TokenType::UNKNOWN);
-  }
-
-  if (json_[pos_++] != 't' || json_[pos_++] != 'r' || json_[pos_++] != 'u' ||
-      json_[pos_++] != 'e') {
-    return Token(json_.substr(start, pos_ - start), TokenType::UNKNOWN);
-  }
-
-  return Token("true", TokenType::BOOLEAN);
-}
-
-Token Lexer::lex_false() {
-  size_t start = pos_;
-  if (pos_ + 4 >= json_.length()) {
-    pos_ = json_.length();
-    return Token(json_.substr(start), TokenType::UNKNOWN);
-  }
-
-  if (json_[pos_++] != 'f' || json_[pos_++] != 'a' || json_[pos_++] != 'l' ||
-      json_[pos_++] != 's' || json_[pos_++] != 'e') {
-    return Token(json_.substr(start, pos_ - start), TokenType::UNKNOWN);
-  }
-
-  return Token("false", TokenType::BOOLEAN);
+  return Token(literal, type);
 }
 
 Token Lexer::lex_string() {
+  size_t start = pos_;
   if (++pos_ >= json_.length()) {
+    error_ = Error(TokenType::QUOTE, pos_ - 1, "unterminated string");
     return Token("", TokenType::UNKNOWN);
   }
 
@@ -126,25 +117,29 @@ Token Lexer::lex_string() {
     char c = json_[pos_];
     if (c == '"') {
       pos_++;
-      return Token(res, TokenType::STRING);
+      return Token(std::move(res), TokenType::STRING);
     }
 
     if (c == '\\') {
       size_t start = pos_;
       std::optional<std::string> ctrl = lex_ctrl();
       if (!ctrl) {
-        return Token(res + json_.substr(start, pos_ - start),
-                     TokenType::UNKNOWN);
+        std::string token = res + json_.substr(start, pos_ - start);
+        error_ = Error(TokenType::STRING, start,
+                       "invalid control character: " + token);
+        return Token(token, TokenType::UNKNOWN);
       }
 
       res += *ctrl;
-    } else {
-      res += c;
-      pos_++;
+      continue;
     }
+
+    res += c;
+    pos_++;
   }
 
-  return Token(res, TokenType::UNKNOWN);
+  error_ = Error(TokenType::QUOTE, start, "unterminated string");
+  return Token(std::move(res), TokenType::UNKNOWN);
 }
 
 std::optional<std::string> Lexer::lex_ctrl() {
@@ -210,25 +205,26 @@ Token Lexer::lex_number() {
 
 Token Lexer::lex_integer() {
   size_t start = pos_;
-
-  if (pos_ >= json_.length()) {
-    return Token("", TokenType::UNKNOWN);
-  }
-
   if (json_[pos_] == '-') {
     pos_++;
   }
 
   if (pos_ >= json_.length()) {
-    return Token(json_.substr(start, pos_ - start), TokenType::UNKNOWN);
+    std::string token = json_.substr(start, pos_ - start);
+    error_ = Error(TokenType::INTEGRAL, start, "invalid integer: " + token);
+    return Token(token, TokenType::UNKNOWN);
   }
 
   if (json_[pos_] < '0' || json_[pos_] > '9') {
-    return Token(json_.substr(start, pos_ - start), TokenType::UNKNOWN);
+    std::string token = json_.substr(start, pos_ - start);
+    error_ = Error(TokenType::INTEGRAL, start, "invalid integer: " + token);
+    return Token(token, TokenType::UNKNOWN);
   }
 
   if (json_[pos_] == '0' && ++pos_ < json_.length() && isdigit(json_[pos_])) {
-    return Token(json_.substr(start, pos_ - start + 1), TokenType::UNKNOWN);
+    std::string token = json_.substr(start, pos_ - start + 1);
+    error_ = Error(TokenType::INTEGRAL, start, "invalid integer: " + token);
+    return Token(token, TokenType::UNKNOWN);
   } else if (json_[pos_] >= '1' && json_[pos_] <= '9') {
     while (++pos_ < json_.length() && isdigit(json_[pos_]));
   }
@@ -243,7 +239,9 @@ Token Lexer::lex_fraction() {
   }
 
   if (++pos_ >= json_.length() || !isdigit(json_[pos_])) {
-    return Token(json_.substr(start, pos_ - start), TokenType::UNKNOWN);
+    std::string token = json_.substr(start, pos_ - start);
+    error_ = Error(TokenType::DOUBLE, start, "invalid fraction: " + token);
+    return Token(token, TokenType::UNKNOWN);
   }
 
   while (pos_ < json_.length() && isdigit(json_[pos_])) {
@@ -264,7 +262,9 @@ Token Lexer::lex_exponent() {
   }
 
   if (pos_ >= json_.length() || !isdigit(json_[pos_])) {
-    return Token(json_.substr(start, pos_ - start), TokenType::UNKNOWN);
+    std::string token = json_.substr(start, pos_ - start);
+    error_ = Error(TokenType::INTEGRAL, start, "invalid exponent: " + token);
+    return Token(token, TokenType::UNKNOWN);
   }
 
   while (pos_ < json_.length() && isdigit(json_[pos_])) {
