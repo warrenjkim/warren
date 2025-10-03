@@ -10,6 +10,24 @@ namespace syntax {
 
 Lexer::Lexer(const std::string& json) : pos_(0), json_(json), curr_() {}
 
+Lexer& Lexer::operator++() {
+  curr_ = next_token();
+
+  return *this;
+}
+
+const Token& Lexer::operator*() const { return curr_; }
+
+const Token* Lexer::operator->() const { return &curr_; }
+
+Lexer::operator bool() const { return !eof() && ok(); }
+
+Lexer::Error Lexer::error() const { return *error_; }
+
+bool Lexer::eof() const { return curr_.type == TokenType::END_OF_JSON; }
+
+bool Lexer::ok() const { return !error_; }
+
 Token Lexer::next_token() {
   strip_whitespace();
   if (pos_ >= json_.length()) {
@@ -62,24 +80,6 @@ Token Lexer::next_token() {
   }
 }
 
-Lexer& Lexer::operator++() {
-  curr_ = next_token();
-
-  return *this;
-}
-
-const Token& Lexer::operator*() const { return curr_; }
-
-const Token* Lexer::operator->() const { return &curr_; }
-
-Lexer::operator bool() const { return !eof() && ok(); }
-
-Lexer::Error Lexer::error() const { return *error_; }
-
-bool Lexer::eof() const { return curr_.type == TokenType::END_OF_JSON; }
-
-bool Lexer::ok() const { return !error_; }
-
 Token Lexer::lex_literal(const std::string& literal, TokenType type) {
   size_t start = pos_;
   if (pos_ + literal.length() > json_.length()) {
@@ -112,7 +112,7 @@ Token Lexer::lex_string() {
     return Token("", TokenType::UNKNOWN);
   }
 
-  std::string res = "";
+  std::string res;
   while (pos_ < json_.length()) {
     char c = json_[pos_];
     if (c == '"') {
