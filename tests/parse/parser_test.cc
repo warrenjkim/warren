@@ -5,8 +5,8 @@
 #include "warren/json/internal/parse/lexer.h"
 #include "warren/json/utils/types.h"
 
+namespace warren {
 namespace json {
-namespace syntax {
 
 namespace {
 
@@ -109,5 +109,5 @@ TEST(ParserTest, SimpleArray) {
 
 }  // namespace
 
-}  // namespace syntax
 }  // namespace json
+}  // namespace warren

@@ -5,8 +5,8 @@
 
 #include "warren/json/internal/parse/token.h"
 
+namespace warren {
 namespace json {
-namespace syntax {
 
 Lexer::Lexer(const std::string& json) : pos_(0), json_(json), curr_() {}
 
@@ -280,5 +280,5 @@ void Lexer::strip_whitespace() {
   }
 }
 
-}  // namespace syntax
 }  // namespace json
+}  // namespace warren

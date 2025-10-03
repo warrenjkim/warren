@@ -4,8 +4,8 @@
 #include "gtest/gtest.h"
 #include "warren/json/internal/parse/token.h"
 
+namespace warren {
 namespace json {
-namespace syntax {
 
 namespace {
 
@@ -279,5 +279,5 @@ TEST(LexerTest, EofOnEmptyInput) {
 
 }  // namespace
 
-}  // namespace syntax
 }  // namespace json
+}  // namespace warren
