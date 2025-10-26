@@ -8,7 +8,7 @@ namespace warren {
 
 class SystemClock final : public Clock {
  public:
-  inline virtual TimePoint now() const override {
+  virtual TimePoint now() const override {
     std::chrono::duration epoch =
         std::chrono::system_clock::now().time_since_epoch();
     auto seconds = std::chrono::duration_cast<std::chrono::seconds>(epoch);
