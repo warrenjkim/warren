@@ -6,6 +6,16 @@ test_suite(
 )
 
 cc_library(
+    name = "time",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":clock",
+        ":fake_clock",
+        ":system_clock",
+    ],
+)
+
+cc_library(
     name = "clock",
     hdrs = [
         "clock.h",

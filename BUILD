@@ -3,6 +3,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//json",
+        "//time",
     ],
 )
 
