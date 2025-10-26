@@ -14,7 +14,7 @@ class Clock {
   };
 
   virtual ~Clock() = default;
-  virtual TimePoint now() = 0;
+  virtual TimePoint now() const = 0;
 };
 
 }  // namespace warren

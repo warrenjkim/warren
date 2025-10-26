@@ -10,7 +10,7 @@ class FakeClock : public Clock {
  public:
   explicit FakeClock(TimePoint now) : now_(std::move(now)) {}
 
-  inline virtual TimePoint now() override { return now_; }
+  inline virtual TimePoint now() const override { return now_; }
 
   inline void advance(const TimePoint offset) {
     now_.seconds += offset.seconds;
