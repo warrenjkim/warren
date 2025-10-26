@@ -1,12 +1,14 @@
 cc_library(
-    name = "json",
+    name = "warren",
     visibility = ["//visibility:public"],
     deps = [
-        "//src:impl",
+        "//json",
     ],
 )
 
-alias(
-    name = "warren_json",
-    actual = ":json",
+test_suite(
+    name = "all_tests",
+    tests = [
+        "//json:tests",
+    ],
 )

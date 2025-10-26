@@ -2,9 +2,9 @@ name: Test Coverage
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   test-coverage:
@@ -28,6 +28,6 @@ jobs:
         run: bazel build --verbose_failures //...
 
       - name: Run tests
-        run: bazel test --test_output=all //tests:all_tests
+        run: bazel test --test_output=all //:all_tests
 
       # TODO(add coverage)

@@ -1,8 +1,8 @@
-#include "warren/json/internal/parse/parser.h"
+#include "warren/json/parse/parser.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "warren/json/internal/parse/lexer.h"
+#include "warren/json/parse/lexer.h"
 
 namespace warren {
 namespace json {

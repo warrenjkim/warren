@@ -4,8 +4,8 @@
 #include <sstream>
 #include <string>
 
-#include "warren/json/internal/parse/lexer.h"
-#include "warren/json/internal/parse/token.h"
+#include "warren/json/parse/lexer.h"
+#include "warren/json/parse/token.h"
 #include "warren/json/value.h"
 
 namespace {
@@ -14,11 +14,11 @@ struct Printer {
   size_t level = 0;
   const warren::json::PrintOptions& opts;
 
-  std::string indent() {
+  std::string indent() const {
     return opts.compact ? "" : std::string(level * opts.tab_width, ' ');
   }
 
-  std::string format(double d) {
+  std::string format(double d) const {
     std::ostringstream oss;
     oss << std::setprecision(15) << std::defaultfloat << d;
 
