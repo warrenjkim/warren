@@ -6,7 +6,7 @@
 
 namespace warren {
 
-class SystemClock : public Clock {
+class SystemClock final : public Clock {
  public:
   inline virtual TimePoint now() const override {
     std::chrono::duration epoch =

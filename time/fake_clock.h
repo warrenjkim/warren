@@ -6,7 +6,7 @@
 
 namespace warren {
 
-class FakeClock : public Clock {
+class FakeClock final : public Clock {
  public:
   explicit FakeClock(TimePoint now) : now_(std::move(now)) {}
 
