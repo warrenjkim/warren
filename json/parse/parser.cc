@@ -1,12 +1,12 @@
-#include "parser.h"
+#include "warren/json/parse/parser.h"
 
 #include <cstddef>  // size_t
 #include <cstdint>  // int32_t, uint32_t
 #include <map>
 #include <string>
 
-#include "warren/json/internal/parse/lexer.h"
-#include "warren/json/internal/parse/token.h"
+#include "warren/json/parse/lexer.h"
+#include "warren/json/parse/token.h"
 #include "warren/json/utils/exception.h"
 #include "warren/json/utils/to_string.h"
 

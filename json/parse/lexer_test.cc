@@ -1,10 +1,10 @@
-#include "warren/json/internal/parse/lexer.h"
+#include "warren/json/parse/lexer.h"
 
 #include <ostream>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "warren/json/internal/parse/token.h"
+#include "warren/json/parse/token.h"
 #include "warren/json/utils/to_string.h"
 
 namespace warren {

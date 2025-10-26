@@ -3,8 +3,8 @@
 #include <optional>
 #include <string>
 
-#include "warren/json/internal/parse/reader.h"
-#include "warren/json/internal/parse/token.h"
+#include "warren/json/parse/reader.h"
+#include "warren/json/parse/token.h"
 
 namespace warren {
 namespace json {

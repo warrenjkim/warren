@@ -1,9 +1,9 @@
-#include "warren/json/internal/parse/lexer.h"
+#include "warren/json/parse/lexer.h"
 
 #include <cctype>    // isdigit, isspace, isxdigit, tolower
 #include <optional>  // nullopt, optional
 
-#include "warren/json/internal/parse/token.h"
+#include "warren/json/parse/token.h"
 
 namespace warren {
 namespace json {

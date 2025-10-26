@@ -2,7 +2,7 @@
 
 #include <cstddef>
 
-#include "warren/json/internal/parse/lexer.h"
+#include "warren/json/parse/lexer.h"
 #include "warren/json/value.h"
 
 namespace warren {
