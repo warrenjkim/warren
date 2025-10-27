@@ -10,10 +10,10 @@ namespace warren {
 struct Tracer {
   virtual ~Tracer() = default;
 
-  virtual std::unique_ptr<trace::Span> make_span(
+  [[nodiscard]] virtual std::unique_ptr<trace::Span> make_span(
       std::string_view name) const = 0;
 
-  virtual std::unique_ptr<trace::Span> make_span(
+  [[nodiscard]] virtual std::unique_ptr<trace::Span> make_span(
       std::string_view name, const trace::SpanContext& context) const = 0;
 };
 
