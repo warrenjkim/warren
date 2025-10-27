@@ -16,7 +16,7 @@ class SystemClock final : public Clock {
     auto nanos =
         std::chrono::duration_cast<std::chrono::nanoseconds>(epoch - seconds);
 
-    return TimePoint{.seconds = seconds.count(), .nanos = nanos.count()};
+    return TimePoint(seconds.count(), static_cast<uint32_t>(nanos.count()));
   }
 };
 
