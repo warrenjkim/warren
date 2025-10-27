@@ -14,7 +14,7 @@ TEST(FakeClockTest, Advance) {
   FakeClock clock(TimePoint{});
   ASSERT_THAT(clock.now(), Eq(TimePoint()));
 
-  clock.advance(Seconds(10));
+  clock.advance(seconds(10));
   EXPECT_THAT(clock.now(), Eq(TimePoint(/*seconds=*/10)));
 }
 

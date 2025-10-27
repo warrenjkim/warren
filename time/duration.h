@@ -134,6 +134,6 @@ inline Duration& Duration::operator/=(int64_t divisor) noexcept {
   return *this;
 }
 
-inline Duration Seconds(int64_t s) noexcept { return Duration(s); }
+inline Duration seconds(int64_t s) noexcept { return Duration(s); }
 
 }  // namespace warren
