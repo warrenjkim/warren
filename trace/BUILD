@@ -24,7 +24,7 @@ cc_library(
     include_prefix = "warren/trace",
     visibility = ["//visibility:public"],
     deps = [
-        "//time:clock",
+        "//time:time_point",
     ],
 )
 

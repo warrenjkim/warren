@@ -10,8 +10,32 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":clock",
+        ":duration",
         ":fake_clock",
         ":system_clock",
+    ],
+)
+
+cc_library(
+    name = "duration",
+    hdrs = [
+        "duration.h",
+    ],
+    include_prefix = "warren/time",
+    strip_include_prefix = ".",
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "time_point",
+    hdrs = [
+        "time_point.h",
+    ],
+    include_prefix = "warren/time",
+    strip_include_prefix = ".",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":duration",
     ],
 )
 
@@ -23,6 +47,9 @@ cc_library(
     include_prefix = "warren/time",
     strip_include_prefix = ".",
     visibility = ["//visibility:public"],
+    deps = [
+        ":time_point",
+    ],
 )
 
 cc_library(
@@ -35,6 +62,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":clock",
+        ":time_point",
     ],
 )
 
@@ -48,6 +76,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":clock",
+        ":time_point",
     ],
 )
 
@@ -56,6 +85,7 @@ cc_test(
     srcs = ["fake_clock_test.cc"],
     deps = [
         ":fake_clock",
+        ":time_point",
         "@googletest//:gtest_main",
     ],
 )
