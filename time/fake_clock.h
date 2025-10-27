@@ -13,7 +13,7 @@ class FakeClock final : public Clock {
 
   virtual TimePoint now() const override { return now_; }
 
-  void advance(Duration offset) { now_ = now_ + offset; }
+  void advance(Duration offset) { now_ += offset; }
 
  private:
   TimePoint now_;
