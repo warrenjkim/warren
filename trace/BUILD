@@ -1,6 +1,7 @@
 cc_library(
     name = "tracer",
     hdrs = [
+        "span.h",
         "tracer.h",
     ],
     include_prefix = "warren/trace",
@@ -25,17 +26,5 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         "//time:time_point",
-    ],
-)
-
-cc_library(
-    name = "null_tracer",
-    hdrs = [
-        "null_tracer.h",
-    ],
-    include_prefix = "warren/trace",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":tracer",
     ],
 )
