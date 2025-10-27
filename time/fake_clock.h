@@ -3,6 +3,7 @@
 #include <utility>
 
 #include "warren/time/clock.h"
+#include "warren/time/time_point.h"
 
 namespace warren {
 
@@ -12,10 +13,7 @@ class FakeClock final : public Clock {
 
   virtual TimePoint now() const override { return now_; }
 
-  void advance(const TimePoint offset) {
-    now_.seconds += offset.seconds;
-    now_.nanos += offset.nanos;
-  }
+  void advance(Duration offset) { now_ += offset; }
 
  private:
   TimePoint now_;

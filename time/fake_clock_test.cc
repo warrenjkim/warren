@@ -2,6 +2,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "warren/time/time_point.h"
 
 namespace warren {
 
@@ -10,11 +11,11 @@ namespace {
 using ::testing::Eq;
 
 TEST(FakeClockTest, Advance) {
-  FakeClock clock(Clock::TimePoint{});
-  ASSERT_THAT(clock.now(), Eq(Clock::TimePoint{}));
+  FakeClock clock(TimePoint{});
+  ASSERT_THAT(clock.now(), Eq(TimePoint()));
 
-  clock.advance(Clock::TimePoint{.seconds = 10});
-  EXPECT_THAT(clock.now(), Eq(Clock::TimePoint{.seconds = 10}));
+  clock.advance(seconds(10));
+  EXPECT_THAT(clock.now(), Eq(TimePoint(/*seconds=*/10)));
 }
 
 }  // namespace

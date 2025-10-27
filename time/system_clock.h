@@ -3,6 +3,7 @@
 #include <chrono>
 
 #include "warren/time/clock.h"
+#include "warren/time/time_point.h"
 
 namespace warren {
 
@@ -15,8 +16,7 @@ class SystemClock final : public Clock {
     auto nanos =
         std::chrono::duration_cast<std::chrono::nanoseconds>(epoch - seconds);
 
-    return TimePoint{.seconds = static_cast<uint64_t>(seconds.count()),
-                     .nanos = static_cast<uint64_t>(nanos.count())};
+    return TimePoint(seconds.count(), static_cast<uint32_t>(nanos.count()));
   }
 };
 
